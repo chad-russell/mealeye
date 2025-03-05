@@ -1,0 +1,37 @@
+{
+  "package_manager": "pnpm",
+  "project_info": {
+    "name": "recipes",
+    "description": "A Next.js application for managing recipes using the Mealie API",
+    "api_docs": "https://mealie.crussell.io/docs"
+  },
+  "commands": {
+    "install": "pnpm install",
+    "dev": "pnpm dev",
+    "build": "pnpm build",
+    "generate_api_types": "pnpm generate-api-types"
+  },
+  "api_info": {
+    "base_url": "https://mealie.crussell.io/api",
+    "swagger_url": "https://mealie.crussell.io/openapi.json",
+    "documentation": "https://mealie.crussell.io/docs"
+  },
+  "type_generation": {
+    "tool": "openapi-typescript",
+    "output_file": "app/lib/api-types.ts",
+    "command": "pnpm generate-api-types"
+  },
+  "editor_preferences": {
+    "tab_size": 2,
+    "insert_spaces": true,
+    "typescript": {
+      "format_on_save": true,
+      "organize_imports_on_save": true
+    }
+  },
+  "notes": [
+    "This project uses the Mealie API for recipe management",
+    "API types are generated from the Swagger documentation",
+    "Run 'pnpm generate-api-types' to update the API types"
+  ]
+} 
