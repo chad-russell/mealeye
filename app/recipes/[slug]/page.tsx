@@ -5,8 +5,7 @@ import { recipeImageUrl } from "@/app/lib/utils/url";
 import { components } from "@/app/lib/types/openapi-generated";
 import HeroImage from "@/app/components/recipe/HeroImage";
 import RecipeMetadata from "@/app/components/recipe/RecipeMetadata";
-import IngredientsList from "@/app/components/recipe/IngredientsList";
-import InstructionsSection from "@/app/components/recipe/InstructionsSection";
+import RecipeContent from "@/app/components/recipe/RecipeContent";
 import NotesSection from "@/app/components/recipe/NotesSection";
 
 type RecipeNote = components["schemas"]["RecipeNote"];
@@ -61,23 +60,20 @@ export default async function RecipePage({
         {/* Metadata Section */}
         <RecipeMetadata recipe={recipe} />
 
-        {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Ingredients */}
-          <div className="lg:col-span-1">
-            <IngredientsList ingredients={recipe.recipeIngredient || []} />
-          </div>
-
-          {/* Right Column - Instructions and Notes */}
-          <div className="lg:col-span-2 space-y-8">
-            {recipe.recipeInstructions && (
-              <InstructionsSection instructions={recipe.recipeInstructions} />
-            )}
-            {recipe.notes && recipe.notes.length > 0 && (
-              <NotesSection notes={recipe.notes} />
-            )}
-          </div>
+        {/* Recipe Content */}
+        <div className="mt-8">
+          <RecipeContent
+            instructions={recipe.recipeInstructions || []}
+            ingredients={recipe.recipeIngredient || []}
+          />
         </div>
+
+        {/* Notes Section */}
+        {recipe.notes && recipe.notes.length > 0 && (
+          <div className="mt-8">
+            <NotesSection notes={recipe.notes} />
+          </div>
+        )}
       </div>
     </div>
   );

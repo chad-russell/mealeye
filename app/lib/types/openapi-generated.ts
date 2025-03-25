@@ -6533,7 +6533,7 @@ export interface components {
             /**
              * Timestamp
              * Format: date-time
-             * @default 2025-03-02T06:27:43.510704Z
+             * @default 2025-03-08T23:12:36.425262Z
              */
             timestamp: string;
         };
@@ -6559,7 +6559,7 @@ export interface components {
             /**
              * Timestamp
              * Format: date-time
-             * @default 2025-03-02T06:27:43.510704Z
+             * @default 2025-03-08T23:12:36.425262Z
              */
             timestamp: string;
             /**
