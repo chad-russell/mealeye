@@ -73,23 +73,36 @@ export default function InstructionsSection({
   instructions,
 }: InstructionsSectionProps) {
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
-      <h2 className="text-xl font-semibold mb-4 text-gray-800">Instructions</h2>
-      <div className="space-y-2">
-        {instructions.map((instruction, index) => (
-          <InstructionCard
-            key={index}
-            instruction={instruction}
-            index={index}
-          />
-        ))}
-        {instructions.map((instruction, index) => (
-          <InstructionCard
-            key={index}
-            instruction={instruction}
-            index={index}
-          />
-        ))}
+    <div className="sticky top-8 h-[calc(100vh-4rem)] overflow-hidden bg-white rounded-lg shadow-sm">
+      <div className="p-6 border-b border-gray-100">
+        <h2 className="text-xl font-semibold text-gray-800">Instructions</h2>
+      </div>
+      <div className="h-[calc(100%-4rem)] overflow-y-auto">
+        <div className="p-6">
+          <div className="space-y-2">
+            {instructions.map((instruction, index) => (
+              <InstructionCard
+                key={index}
+                instruction={instruction}
+                index={index}
+              />
+            ))}
+            {instructions.map((instruction, index) => (
+              <InstructionCard
+                key={index}
+                instruction={instruction}
+                index={index}
+              />
+            ))}
+            {instructions.map((instruction, index) => (
+              <InstructionCard
+                key={index}
+                instruction={instruction}
+                index={index}
+              />
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

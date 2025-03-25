@@ -9,11 +9,11 @@ interface IngredientsListProps {
 export default function IngredientsList({ ingredients }: IngredientsListProps) {
   return (
     <div className="sticky top-8 h-[calc(100vh-4rem)] overflow-hidden bg-white rounded-lg shadow-sm">
-      <div className="h-full overflow-y-auto">
+      <div className="p-6 border-b border-gray-100">
+        <h2 className="text-xl font-semibold text-gray-800">Ingredients</h2>
+      </div>
+      <div className="h-[calc(100%-4rem)] overflow-y-auto">
         <div className="p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800">
-            Ingredients
-          </h2>
           <ul className="space-y-3">
             {ingredients.map((ingredient) => (
               <li
