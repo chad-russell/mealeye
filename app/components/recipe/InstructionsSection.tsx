@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ChevronDown, ChevronUp, CheckCircle2 } from "lucide-react";
 import { components } from "@/app/lib/types/openapi-generated";
 import {
   findIngredientsInText,
-  normalizeIngredient,
+  type IngredientAssociation,
 } from "@/app/lib/utils/ingredient-matching";
 
 type RecipeStep = components["schemas"]["RecipeStep"];
@@ -19,7 +19,9 @@ interface InstructionCardProps {
   ingredients: RecipeIngredient[];
   onInstructionComplete: (index: number, completed: boolean) => void;
   highlightedIngredientIds: Set<string>;
+  isHighlighted: boolean;
   onIngredientHover: (ingredientIds: string[] | undefined) => void;
+  associations: IngredientAssociation[];
 }
 
 const InstructionCard = ({
@@ -28,15 +30,31 @@ const InstructionCard = ({
   ingredients,
   onInstructionComplete,
   highlightedIngredientIds,
+  isHighlighted,
   onIngredientHover,
+  associations = [],
 }: InstructionCardProps) => {
   const [isCompleted, setIsCompleted] = useState(false);
   const [isStepHovered, setIsStepHovered] = useState(false);
+  const [referencedIngredients, setReferencedIngredients] = useState<
+    RecipeIngredient[]
+  >([]);
 
   // Find ingredient references in the instruction text using our new matching system
-  const referencedIngredients = instruction.text
-    ? findIngredientsInText(instruction.text, ingredients)
-    : [];
+  useEffect(() => {
+    const fetchIngredients = async () => {
+      if (!instruction.text || !associations?.length) return;
+
+      const stepAssociations = associations.filter((a) => a.step === index + 1);
+      const found = await findIngredientsInText(
+        instruction.text,
+        ingredients,
+        stepAssociations
+      );
+      setReferencedIngredients(found);
+    };
+    fetchIngredients();
+  }, [instruction.text, ingredients, associations, index]);
 
   const toggleCompleted = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -47,13 +65,9 @@ const InstructionCard = ({
 
   const handleStepHover = (hovering: boolean) => {
     setIsStepHovered(hovering);
-    if (hovering) {
-      // When hovering the step, highlight all ingredients in this step
-      if (referencedIngredients.length > 0) {
-        onIngredientHover(referencedIngredients.map((ing) => ing.referenceId));
-      }
+    if (hovering && referencedIngredients.length > 0) {
+      onIngredientHover(referencedIngredients.map((ing) => ing.referenceId));
     } else {
-      // Clear highlights when leaving the step
       onIngredientHover(undefined);
     }
   };
@@ -69,22 +83,20 @@ const InstructionCard = ({
     });
 
     sortedIngredients.forEach((ing) => {
-      const variations = normalizeIngredient(ing);
-      variations.forEach((variation) => {
-        // Create a regex that handles word boundaries and is case insensitive
-        const regex = new RegExp(`\\b${variation}\\b`, "gi");
-        result = result.replace(
-          regex,
-          (match) => `<span 
-            class="cursor-pointer rounded px-1 transition-colors duration-200 ${
-              highlightedIngredientIds.has(ing.referenceId)
-                ? "bg-yellow-100"
-                : "hover:bg-yellow-50"
-            }"
-            data-ingredient-id="${ing.referenceId}"
-          >${match}</span>`
-        );
-      });
+      const ingText = ing.note || ing.display || "";
+      // Create a regex that handles word boundaries and is case insensitive
+      const regex = new RegExp(`\\b${ingText}\\b`, "gi");
+      result = result.replace(
+        regex,
+        (match) => `<span 
+          class="cursor-pointer rounded px-1 transition-colors duration-200 ${
+            highlightedIngredientIds.has(ing.referenceId)
+              ? "bg-yellow-100"
+              : "hover:bg-yellow-50"
+          }"
+          data-ingredient-id="${ing.referenceId}"
+        >${match}</span>`
+      );
     });
 
     return (
@@ -94,14 +106,16 @@ const InstructionCard = ({
         onMouseOver={(e) => {
           const target = e.target as HTMLElement;
           if (target.hasAttribute("data-ingredient-id")) {
-            onIngredientHover([target.getAttribute("data-ingredient-id")!]);
+            const id = target.getAttribute("data-ingredient-id")!;
+            onIngredientHover([id]);
           } else {
             // Check if we're hovering over a child of a highlighted ingredient
             const parent = target.closest(
               "[data-ingredient-id]"
             ) as HTMLElement;
             if (parent) {
-              onIngredientHover([parent.getAttribute("data-ingredient-id")!]);
+              const id = parent.getAttribute("data-ingredient-id")!;
+              onIngredientHover([id]);
             }
           }
         }}
@@ -125,7 +139,11 @@ const InstructionCard = ({
 
   return (
     <div
-      className="mb-4 rounded-lg border border-gray-100 shadow-sm overflow-hidden bg-white"
+      className={`mb-4 rounded-lg border shadow-sm overflow-hidden bg-white transition-all duration-200 ${
+        isHighlighted
+          ? "border-yellow-200 bg-yellow-50 shadow-md"
+          : "border-gray-100"
+      }`}
       onMouseEnter={() => handleStepHover(true)}
       onMouseLeave={() => handleStepHover(false)}
     >
@@ -176,9 +194,12 @@ const InstructionCard = ({
 interface InstructionsSectionProps {
   instructions: RecipeStep[];
   ingredients: RecipeIngredient[];
-  onInstructionComplete: (completedInstructions: boolean[]) => void;
+  onInstructionComplete: (completedSteps: boolean[]) => void;
   onIngredientHover: (ingredientIds: string[] | undefined) => void;
   highlightedIngredientIds: Set<string>;
+  highlightedStepNumbers: Set<number>;
+  associations: IngredientAssociation[];
+  isLoading: boolean;
 }
 
 export default function InstructionsSection({
@@ -187,6 +208,9 @@ export default function InstructionsSection({
   onInstructionComplete,
   onIngredientHover,
   highlightedIngredientIds,
+  highlightedStepNumbers,
+  associations = [],
+  isLoading = false,
 }: InstructionsSectionProps) {
   const [completedSteps, setCompletedSteps] = useState<boolean[]>(
     new Array(instructions.length).fill(false)
@@ -203,27 +227,49 @@ export default function InstructionsSection({
     onInstructionComplete(newCompletedSteps);
   };
 
+  // Find which steps should be highlighted based on highlighted ingredients
+  const highlightedSteps = useMemo(() => {
+    if (highlightedIngredientIds.size === 0) return new Set<number>();
+
+    // Get the names of highlighted ingredients
+    const highlightedIngredientNames = ingredients
+      .filter((ing) => highlightedIngredientIds.has(ing.referenceId))
+      .map((ing) => (ing.note || ing.display || "").toLowerCase());
+
+    // Find all steps that use these ingredients
+    const stepNumbers = associations
+      .filter((assoc) =>
+        highlightedIngredientNames.includes(assoc.ingredient.toLowerCase())
+      )
+      .map((assoc) => assoc.step);
+
+    console.log("[InstructionsSection] Highlighting steps:", {
+      highlightedIngredients: highlightedIngredientNames,
+      stepNumbers,
+    });
+
+    return new Set(stepNumbers);
+  }, [highlightedIngredientIds, ingredients, associations]);
+
   return (
-    <div className="sticky top-8 h-[calc(100vh-4rem)] overflow-hidden bg-white rounded-lg shadow-sm">
-      <div className="p-6 border-b border-gray-100">
+    <div className="space-y-4">
+      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-100">
         <h2 className="text-xl font-semibold text-gray-800">Instructions</h2>
       </div>
-      <div className="h-[calc(100%-4rem)] overflow-y-auto">
-        <div className="p-6">
-          <div className="space-y-2">
-            {instructions.map((instruction, index) => (
-              <InstructionCard
-                key={index}
-                instruction={instruction}
-                index={index}
-                ingredients={ingredients}
-                onInstructionComplete={handleStepComplete}
-                onIngredientHover={onIngredientHover}
-                highlightedIngredientIds={highlightedIngredientIds}
-              />
-            ))}
-          </div>
-        </div>
+      <div className="space-y-4">
+        {instructions.map((instruction, index) => (
+          <InstructionCard
+            key={index}
+            instruction={instruction}
+            index={index}
+            ingredients={ingredients}
+            onInstructionComplete={handleStepComplete}
+            highlightedIngredientIds={highlightedIngredientIds}
+            isHighlighted={highlightedStepNumbers.has(index + 1)}
+            onIngredientHover={onIngredientHover}
+            associations={associations}
+          />
+        ))}
       </div>
     </div>
   );
