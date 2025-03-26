@@ -13,6 +13,109 @@ type RecipeIngredient = components["schemas"]["RecipeIngredient-Output"] & {
   referenceId: string;
 };
 
+type TextToken = { type: "text"; text: string };
+type IngredientToken = { type: "ingredient"; text: string; ingredient: string };
+type Token = TextToken | IngredientToken;
+
+interface HighlightedTextProps {
+  text: string;
+  highlights: Array<{
+    text: string;
+    ingredient: string;
+  }>;
+  highlightedIngredientIds: Set<string>;
+  isHighlighted: boolean;
+  onIngredientHover: (ids: string[] | undefined, isStepHover?: boolean) => void;
+  isStepHovered: boolean;
+}
+
+const HighlightedText = ({
+  text,
+  highlights,
+  highlightedIngredientIds,
+  isHighlighted,
+  onIngredientHover,
+  isStepHovered,
+}: HighlightedTextProps) => {
+  // Sort highlights by start position (longest first to handle overlapping matches)
+  const sortedHighlights = [...highlights].sort((a, b) => {
+    const aIndex = text.indexOf(a.text);
+    const bIndex = text.indexOf(b.text);
+    if (aIndex === bIndex) {
+      return b.text.length - a.text.length;
+    }
+    return aIndex - bIndex;
+  });
+
+  // Create tokens array
+  const tokens: Token[] = [];
+  let currentIndex = 0;
+
+  sortedHighlights.forEach((highlight) => {
+    const index = text.indexOf(highlight.text, currentIndex);
+    if (index === -1) return;
+
+    // Add text before the highlight
+    if (index > currentIndex) {
+      tokens.push({
+        type: "text",
+        text: text.slice(currentIndex, index),
+      });
+    }
+
+    // Add the highlighted text
+    tokens.push({
+      type: "ingredient",
+      text: highlight.text,
+      ingredient: highlight.ingredient,
+    });
+
+    currentIndex = index + highlight.text.length;
+  });
+
+  // Add remaining text after last highlight
+  if (currentIndex < text.length) {
+    tokens.push({
+      type: "text",
+      text: text.slice(currentIndex),
+    });
+  }
+
+  return (
+    <div className={`text-gray-600 ${isHighlighted ? "bg-yellow-50" : ""}`}>
+      {tokens.map((token, i) =>
+        token.type === "ingredient" ? (
+          <span
+            key={i}
+            className={`cursor-pointer transition-colors duration-200 ${
+              highlightedIngredientIds.has(token.ingredient)
+                ? "bg-orange-300 text-orange-900 font-semibold"
+                : isHighlighted
+                ? "bg-yellow-200 text-yellow-900"
+                : "hover:bg-yellow-50"
+            }`}
+            data-ingredient-id={token.ingredient}
+            onMouseEnter={() => onIngredientHover([token.ingredient])}
+            onMouseLeave={(e) => {
+              const relatedTarget = e.relatedTarget as HTMLElement;
+              if (
+                !relatedTarget?.closest("[data-ingredient-id]") &&
+                !isStepHovered
+              ) {
+                onIngredientHover(undefined);
+              }
+            }}
+          >
+            {token.text}
+          </span>
+        ) : (
+          <span key={i}>{token.text}</span>
+        )
+      )}
+    </div>
+  );
+};
+
 interface InstructionCardProps {
   instruction: RecipeStep;
   index: number;
@@ -43,15 +146,61 @@ const InstructionCard = ({
   // Find ingredient references in the instruction text using our new matching system
   useEffect(() => {
     const fetchIngredients = async () => {
-      if (!instruction.text || !associations?.length) return;
+      if (!instruction.text || !associations?.length) {
+        console.log("[InstructionsSection] No text or associations, skipping", {
+          text: instruction.text,
+          associationsLength: associations?.length,
+        });
+        return;
+      }
 
       const stepAssociations = associations.filter((a) => a.step === index + 1);
-      const foundIds = findIngredientsInText(
-        instruction.text,
-        ingredients,
-        stepAssociations
-      );
-      setReferencedIngredientIds(foundIds);
+      console.log("[InstructionsSection] Step associations:", {
+        step: index + 1,
+        associations: stepAssociations.map((a) => ({
+          ingredient: a.ingredient,
+          step: a.step,
+        })),
+      });
+
+      // Get ingredient IDs from associations
+      const ingredientIds = stepAssociations
+        .map((assoc) => {
+          // Find the ingredient that matches this association
+          const matchingIngredient = ingredients.find((ing) => {
+            const ingText = (ing.note || ing.display || "")
+              .toLowerCase()
+              .trim();
+            const assocText = assoc.ingredient.toLowerCase().trim();
+            return (
+              ingText === assocText ||
+              ingText.includes(assocText) ||
+              assocText.includes(ingText)
+            );
+          });
+
+          if (!matchingIngredient) {
+            console.log("[InstructionsSection] Could not find ingredient:", {
+              association: assoc.ingredient,
+              availableIngredients: ingredients.map(
+                (ing) => ing.note || ing.display
+              ),
+            });
+          }
+
+          return matchingIngredient?.referenceId;
+        })
+        .filter((id): id is string => id !== undefined);
+
+      console.log("[InstructionsSection] Found ingredient IDs:", {
+        step: index + 1,
+        ingredientIds,
+        matchedIngredients: ingredients
+          .filter((ing) => ingredientIds.includes(ing.referenceId))
+          .map((ing) => ing.note || ing.display),
+      });
+
+      setReferencedIngredientIds(ingredientIds);
     };
     fetchIngredients();
   }, [instruction.text, ingredients, associations, index]);
@@ -73,75 +222,13 @@ const InstructionCard = ({
     }
   };
 
-  const renderInstructionText = (text: string) => {
-    let result = text;
-
-    // Get the referenced ingredients from their IDs
-    const referencedIngredients = ingredients.filter((ing) =>
-      referencedIngredientIds.includes(ing.referenceId)
-    );
-
-    // Sort ingredients by length (longest first) to handle overlapping matches correctly
-    const sortedIngredients = [...referencedIngredients].sort((a, b) => {
-      const aText = (a.note || a.display || "").length;
-      const bText = (b.note || b.display || "").length;
-      return bText - aText;
-    });
-
-    sortedIngredients.forEach((ing) => {
-      const ingText = ing.note || ing.display || "";
-      // Create a regex that handles word boundaries and is case insensitive
-      const regex = new RegExp(`\\b${ingText}\\b`, "gi");
-      result = result.replace(
-        regex,
-        (match) => `<span 
-          class="cursor-pointer rounded px-1 transition-colors duration-200 ${
-            highlightedIngredientIds.has(ing.referenceId)
-              ? "bg-yellow-100"
-              : "hover:bg-yellow-50"
-          }"
-          data-ingredient-id="${ing.referenceId}"
-        >${match}</span>`
-      );
-    });
-
-    return (
-      <div
-        className="text-gray-600"
-        dangerouslySetInnerHTML={{ __html: result }}
-        onMouseOver={(e) => {
-          const target = e.target as HTMLElement;
-          if (target.hasAttribute("data-ingredient-id")) {
-            const id = target.getAttribute("data-ingredient-id")!;
-            onIngredientHover([id]);
-          } else {
-            // Check if we're hovering over a child of a highlighted ingredient
-            const parent = target.closest(
-              "[data-ingredient-id]"
-            ) as HTMLElement;
-            if (parent) {
-              const id = parent.getAttribute("data-ingredient-id")!;
-              onIngredientHover([id]);
-            }
-          }
-        }}
-        onMouseOut={(e) => {
-          const target = e.target as HTMLElement;
-          const relatedTarget = e.relatedTarget as HTMLElement;
-
-          // Only clear highlight if we're not moving to another part of the same ingredient
-          // and we're not hovering the step card
-          if (
-            !target.contains(relatedTarget) &&
-            !relatedTarget?.closest("[data-ingredient-id]") &&
-            !isStepHovered
-          ) {
-            onIngredientHover(undefined);
-          }
-        }}
-      />
-    );
-  };
+  // Get highlights for this step
+  const highlights = associations
+    .filter((assoc) => assoc.step === index + 1)
+    .map((assoc) => ({
+      text: assoc.text,
+      ingredient: assoc.ingredient,
+    }));
 
   return (
     <div
@@ -191,7 +278,16 @@ const InstructionCard = ({
           overflow: "hidden",
         }}
       >
-        {instruction.text && renderInstructionText(instruction.text)}
+        {instruction.text && (
+          <HighlightedText
+            text={instruction.text}
+            highlights={highlights}
+            highlightedIngredientIds={highlightedIngredientIds}
+            isHighlighted={isHighlighted}
+            onIngredientHover={onIngredientHover}
+            isStepHovered={isStepHovered}
+          />
+        )}
       </div>
     </div>
   );

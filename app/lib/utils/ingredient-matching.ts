@@ -11,7 +11,7 @@ interface IngredientAssociation {
   ingredient: string;
   amount?: string;
   step: number;
-  usage: string;
+  text: string;
 }
 
 interface LLMProvider {
@@ -48,42 +48,6 @@ class OpenAIProvider implements LLMProvider {
       description: step.text || "",
     }));
 
-    const prompt = `
-Instructions:
-
-You will be given two JSON objects:
-
-Ingredients List: A list of ingredients, where each ingredient has the following fields:
-name: The name of the ingredient (e.g., "canola oil" or "salt and pepper").
-amount: The optional amount of the ingredient (e.g., "1/4 cup"). Some ingredients may not have amounts.
-description: An optional description (e.g., "oil").
-
-Steps List: A list of steps, where each step has the following fields:
-description: A description of the step that may contain the ingredients listed in the Ingredients List.
-
-Your task is to analyze the steps and associate each ingredient with the relevant step, the amount of that ingredient used in the step (if available), and a short description of how it's used. Return the result as a JSON list of associations.
-
-Input:
-Ingredients: ${JSON.stringify(ingredientsData, null, 2)}
-Steps: ${JSON.stringify(stepsData, null, 2)}
-
-Please provide the output in the following format:
-[
-  {
-    "ingredient": "ingredient name",
-    "amount": "amount from ingredients list (omit if not available)",
-    "step": step number (1-based),
-    "usage": "brief description of usage"
-  }
-]
-
-Make sure that:
-- The ingredient name matches exactly with the names in the Ingredients List
-- Include the amount field only if it's available in the Ingredients List
-- The step field reflects the correct step number
-- The usage field reflects a brief description of how the ingredient is used in that step
-`;
-
     try {
       const response = await this.client.chat.completions.create({
         model: this.model,
@@ -95,7 +59,37 @@ Make sure that:
           },
           {
             role: "user",
-            content: prompt,
+            content: `Analyze these recipe ingredients and steps to create ingredient associations. For each ingredient, find the exact text from the steps that mentions it.
+
+Ingredients:
+${JSON.stringify(ingredientsData, null, 2)}
+
+Steps:
+${JSON.stringify(stepsData, null, 2)}
+
+Return a JSON object with an "associations" array containing objects with:
+- ingredient: The ingredient name
+- amount: The amount (if available)
+- step: The step number (1-based)
+- text: The exact text from the step that mentions the ingredient
+
+For example:
+{
+  "associations": [
+    {
+      "ingredient": "steak",
+      "amount": "1 pound",
+      "step": 1,
+      "text": "steak"
+    }
+  ]
+}
+
+Important:
+- Return the exact text from the step that mentions each ingredient
+- If an ingredient appears multiple times in a step, create separate associations
+- The text field should be the minimal but complete word or phrase that makes sense when highlighted
+- Do not paraphrase or describe how the ingredient is used, just return the exact text`,
           },
         ],
         response_format: { type: "json_object" },
@@ -184,7 +178,7 @@ function findStepNumberFromText(
 ): number {
   // Find the association that matches this text
   const association = associations.find((assoc) =>
-    text.toLowerCase().includes(assoc.usage?.toLowerCase() || "")
+    text.toLowerCase().includes(assoc.text?.toLowerCase() || "")
   );
   return association?.step || 0;
 }
