@@ -185,12 +185,14 @@ const InstructionCard = ({
         },
         onMouseLeave: (e: React.MouseEvent) => {
           const relatedTarget = e.relatedTarget as HTMLElement;
-          if (
-            !relatedTarget?.closest("[data-ingredient-id]") &&
-            !isStepHovered
-          ) {
+          if (!relatedTarget?.closest("[data-ingredient-id]")) {
             setHoveredIngredient(null);
-            onIngredientHover(undefined);
+            // If we're still within the instruction card, trigger the step hover
+            if (relatedTarget?.closest(".instruction-card")) {
+              onIngredientHover([String(index + 1)], true);
+            } else {
+              onIngredientHover(undefined);
+            }
           }
         },
       }));
@@ -204,7 +206,7 @@ const InstructionCard = ({
 
   return (
     <div
-      className={`mb-4 rounded-lg border shadow-sm overflow-hidden bg-white transition-all duration-200 ${
+      className={`mb-4 rounded-lg border shadow-sm overflow-hidden bg-white transition-all duration-200 instruction-card ${
         isHighlighted
           ? "border-yellow-200 bg-yellow-50 shadow-md"
           : "border-gray-100"
