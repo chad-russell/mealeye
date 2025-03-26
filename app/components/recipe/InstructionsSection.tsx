@@ -181,7 +181,7 @@ const InstructionCard = ({
           "cursor-pointer transition-colors duration-200 bg-amber-100 text-amber-900",
         onMouseEnter: () => {
           setHoveredIngredient(h.ingredient);
-          onIngredientHover([h.ingredient]);
+          onIngredientHover([h.ingredient], false);
         },
         onMouseLeave: (e: React.MouseEvent) => {
           const relatedTarget = e.relatedTarget as HTMLElement;

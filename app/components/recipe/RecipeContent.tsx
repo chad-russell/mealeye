@@ -154,7 +154,9 @@ export default function RecipeContent({
           instructions={instructions}
           ingredients={ingredients}
           onInstructionComplete={setCompletedInstructions}
-          onIngredientHover={(ids) => handleIngredientHover(ids, true)}
+          onIngredientHover={(ids, isStepHover) =>
+            handleIngredientHover(ids, isStepHover)
+          }
           highlightedIngredientIds={highlightedIngredientIds}
           highlightedStepNumbers={highlightedStepNumbers}
           associations={associations}
