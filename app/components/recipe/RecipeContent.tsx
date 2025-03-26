@@ -69,13 +69,6 @@ export default function RecipeContent({
           instructions
         );
         if (newAssociations) {
-          console.log(
-            "[RecipeContent] Received associations:",
-            newAssociations.map((a) => ({
-              ingredient: a.ingredient,
-              step: a.step,
-            }))
-          );
           setAssociations(newAssociations);
         }
       } catch (error) {

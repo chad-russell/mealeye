@@ -102,6 +102,8 @@ interface InstructionCardProps {
   highlightedIngredientIds: Set<string>;
   isHighlighted: boolean;
   onIngredientHover: (ids: string[] | undefined, isStepHover?: boolean) => void;
+  onStepHover: (stepNumber: number | null) => void;
+  hoveredStepNumber: number | null;
   associations: IngredientAssociation[];
 }
 
@@ -113,13 +115,15 @@ const InstructionCard = ({
   highlightedIngredientIds,
   isHighlighted,
   onIngredientHover,
+  onStepHover,
+  hoveredStepNumber,
   associations = [],
 }: InstructionCardProps) => {
   const [isCompleted, setIsCompleted] = useState(false);
-  const [isStepHovered, setIsStepHovered] = useState(false);
   const [hoveredIngredient, setHoveredIngredient] = useState<string | null>(
     null
   );
+  const stepNumber = index + 1;
 
   const toggleCompleted = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -128,19 +132,11 @@ const InstructionCard = ({
     onInstructionComplete(index, newCompleted);
   };
 
-  const handleStepHover = (hovering: boolean) => {
-    setIsStepHovered(hovering);
-    if (hovering) {
-      onIngredientHover([String(index + 1)], true);
-    } else {
-      onIngredientHover(undefined);
-    }
-  };
-
   // Get highlights for this step
   const stepHighlights = useMemo(() => {
+    // First get associations for this specific step
     const stepAssociations = associations.filter(
-      (assoc) => assoc.step === index + 1
+      (assoc) => assoc.step === stepNumber
     );
 
     return stepAssociations
@@ -164,17 +160,25 @@ const InstructionCard = ({
         };
       })
       .filter((h): h is NonNullable<typeof h> => h !== null);
-  }, [associations, index, ingredients]);
+  }, [associations, stepNumber, ingredients]);
 
   // Convert step highlights to highlighted text format based on current state
   const activeHighlights = useMemo(() => {
+    // If there's a hovered step and it's not this one, don't show any highlights
+    if (hoveredStepNumber !== null && hoveredStepNumber !== stepNumber) {
+      return [];
+    }
+
     return stepHighlights
-      .filter((h) =>
-        // Only show highlights for hovered ingredient or all if step is highlighted
-        hoveredIngredient
-          ? h.ingredient === hoveredIngredient
-          : highlightedIngredientIds.has(h.ingredient)
-      )
+      .filter((h) => {
+        // If we're hovering an ingredient, only show that ingredient's highlights
+        if (hoveredIngredient) {
+          return h.ingredient === hoveredIngredient;
+        }
+
+        // If we're hovering a step (or no hover), show all highlighted ingredients for this step
+        return highlightedIngredientIds.has(h.ingredient);
+      })
       .map((h) => ({
         text: h.text,
         className:
@@ -189,7 +193,7 @@ const InstructionCard = ({
             setHoveredIngredient(null);
             // If we're still within the instruction card, trigger the step hover
             if (relatedTarget?.closest(".instruction-card")) {
-              onIngredientHover([String(index + 1)], true);
+              onIngredientHover([String(stepNumber)], true);
             } else {
               onIngredientHover(undefined);
             }
@@ -200,7 +204,8 @@ const InstructionCard = ({
     stepHighlights,
     highlightedIngredientIds,
     hoveredIngredient,
-    isStepHovered,
+    hoveredStepNumber,
+    stepNumber,
     onIngredientHover,
   ]);
 
@@ -211,9 +216,9 @@ const InstructionCard = ({
           ? "border-yellow-200 bg-yellow-50 shadow-md"
           : "border-gray-100"
       }`}
-      onMouseEnter={() => handleStepHover(true)}
+      onMouseEnter={() => onStepHover(stepNumber)}
       onMouseLeave={() => {
-        handleStepHover(false);
+        onStepHover(null);
         setHoveredIngredient(null);
       }}
     >
@@ -290,6 +295,9 @@ export default function InstructionsSection({
   const [completedSteps, setCompletedSteps] = useState<boolean[]>(
     new Array(instructions.length).fill(false)
   );
+  const [hoveredStepNumber, setHoveredStepNumber] = useState<number | null>(
+    null
+  );
 
   if (!instructions || !ingredients) {
     return null;
@@ -300,6 +308,15 @@ export default function InstructionsSection({
     newCompletedSteps[index] = completed;
     setCompletedSteps(newCompletedSteps);
     onInstructionComplete(newCompletedSteps);
+  };
+
+  const handleStepHover = (stepNumber: number | null) => {
+    setHoveredStepNumber(stepNumber);
+    if (stepNumber !== null) {
+      onIngredientHover([String(stepNumber)], true);
+    } else {
+      onIngredientHover(undefined);
+    }
   };
 
   // Find which steps should be highlighted based on highlighted ingredients
@@ -317,11 +334,6 @@ export default function InstructionsSection({
         highlightedIngredientNames.includes(assoc.ingredient.toLowerCase())
       )
       .map((assoc) => assoc.step);
-
-    console.log("[InstructionsSection] Highlighting steps:", {
-      highlightedIngredients: highlightedIngredientNames,
-      stepNumbers,
-    });
 
     return new Set(stepNumbers);
   }, [highlightedIngredientIds, ingredients, associations]);
@@ -342,6 +354,8 @@ export default function InstructionsSection({
             highlightedIngredientIds={highlightedIngredientIds}
             isHighlighted={highlightedStepNumbers.has(index + 1)}
             onIngredientHover={onIngredientHover}
+            onStepHover={handleStepHover}
+            hoveredStepNumber={hoveredStepNumber}
             associations={associations}
           />
         ))}
