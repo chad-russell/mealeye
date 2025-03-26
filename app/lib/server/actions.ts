@@ -56,7 +56,7 @@ description: An optional description (e.g., "oil").
 Steps List: A list of steps, where each step has the following fields:
 description: A description of the step that may contain the ingredients listed in the Ingredients List.
 
-Your task is to analyze the steps and associate each ingredient with the relevant step, the amount of that ingredient used in the step (if available), and the exact text from the step that mentions this ingredient. Return the result as a JSON list of associations.
+Your task is to analyze the steps and associate each ingredient with the relevant step, the amount of that ingredient used in the step (if available), and the minimal text from the step that mentions this ingredient. Return the result as a JSON list of associations.
 
 Input:
 Ingredients: ${JSON.stringify(ingredientsData, null, 2)}
@@ -66,17 +66,20 @@ Return a JSON object with a single "associations" array containing objects with 
 - ingredient: the ingredient name as listed in the ingredients list
 - amount: the amount of the ingredient (if specified in the ingredients list)
 - step: the step number where the ingredient is used (1-based)
-- text: the exact text from the step that mentions this ingredient
+- text: the minimal text from the step that mentions this ingredient
 
 Make sure that:
 - The ingredient name matches exactly with the names in the Ingredients List
 - Include the amount field only if it's available in the Ingredients List
 - The step field reflects the correct step number
-- The text field contains the EXACT text from the step that mentions the ingredient - this will be used for highlighting
-- The text should be as minimal as possible while still being clear (e.g., "steak" instead of "sliced steak and the cornstarch")
+- The text field should contain ONLY the minimal text that references the ingredient
+- For example:
+  * If the step says "mix the sliced steak and cornstarch", use just "steak" or "the sliced steak"
+  * If the step says "combine water, sugar, and salt", use just "water" or "the water"
+- Do not include other ingredients or actions in the text field
 - If an ingredient appears multiple times in a step, create separate associations for each occurrence
 - The text should be a complete word or phrase that makes sense when highlighted
-- Do not paraphrase or describe how the ingredient is used - just copy the exact text from the step
+- Do not paraphrase or describe how the ingredient is used - just return the exact text from the step
 `;
 
     const response = await openai.chat.completions.create({

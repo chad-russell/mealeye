@@ -21,22 +21,14 @@ interface HighlightedTextProps {
   text: string;
   highlights: Array<{
     text: string;
-    ingredient: string;
+    className?: string;
+    onClick?: () => void;
+    onMouseEnter?: () => void;
+    onMouseLeave?: (e: React.MouseEvent) => void;
   }>;
-  highlightedIngredientIds: Set<string>;
-  isHighlighted: boolean;
-  onIngredientHover: (ids: string[] | undefined, isStepHover?: boolean) => void;
-  isStepHovered: boolean;
 }
 
-const HighlightedText = ({
-  text,
-  highlights,
-  highlightedIngredientIds,
-  isHighlighted,
-  onIngredientHover,
-  isStepHovered,
-}: HighlightedTextProps) => {
+const HighlightedText = ({ text, highlights }: HighlightedTextProps) => {
   // Sort highlights by start position (longest first to handle overlapping matches)
   const sortedHighlights = [...highlights].sort((a, b) => {
     const aIndex = text.indexOf(a.text);
@@ -48,7 +40,10 @@ const HighlightedText = ({
   });
 
   // Create tokens array
-  const tokens: Token[] = [];
+  const tokens: Array<{
+    text: string;
+    highlight?: (typeof highlights)[number];
+  }> = [];
   let currentIndex = 0;
 
   sortedHighlights.forEach((highlight) => {
@@ -58,16 +53,14 @@ const HighlightedText = ({
     // Add text before the highlight
     if (index > currentIndex) {
       tokens.push({
-        type: "text",
         text: text.slice(currentIndex, index),
       });
     }
 
     // Add the highlighted text
     tokens.push({
-      type: "ingredient",
       text: highlight.text,
-      ingredient: highlight.ingredient,
+      highlight,
     });
 
     currentIndex = index + highlight.text.length;
@@ -76,35 +69,20 @@ const HighlightedText = ({
   // Add remaining text after last highlight
   if (currentIndex < text.length) {
     tokens.push({
-      type: "text",
       text: text.slice(currentIndex),
     });
   }
 
   return (
-    <div className={`text-gray-600 ${isHighlighted ? "bg-yellow-50" : ""}`}>
+    <div className="text-gray-600">
       {tokens.map((token, i) =>
-        token.type === "ingredient" ? (
+        token.highlight ? (
           <span
             key={i}
-            className={`cursor-pointer transition-colors duration-200 ${
-              highlightedIngredientIds.has(token.ingredient)
-                ? "bg-orange-300 text-orange-900 font-semibold"
-                : isHighlighted
-                ? "bg-yellow-200 text-yellow-900"
-                : "hover:bg-yellow-50"
-            }`}
-            data-ingredient-id={token.ingredient}
-            onMouseEnter={() => onIngredientHover([token.ingredient])}
-            onMouseLeave={(e) => {
-              const relatedTarget = e.relatedTarget as HTMLElement;
-              if (
-                !relatedTarget?.closest("[data-ingredient-id]") &&
-                !isStepHovered
-              ) {
-                onIngredientHover(undefined);
-              }
-            }}
+            className={token.highlight.className}
+            onClick={token.highlight.onClick}
+            onMouseEnter={token.highlight.onMouseEnter}
+            onMouseLeave={token.highlight.onMouseLeave}
           >
             {token.text}
           </span>
@@ -139,71 +117,9 @@ const InstructionCard = ({
 }: InstructionCardProps) => {
   const [isCompleted, setIsCompleted] = useState(false);
   const [isStepHovered, setIsStepHovered] = useState(false);
-  const [referencedIngredientIds, setReferencedIngredientIds] = useState<
-    string[]
-  >([]);
-
-  // Find ingredient references in the instruction text using our new matching system
-  useEffect(() => {
-    const fetchIngredients = async () => {
-      if (!instruction.text || !associations?.length) {
-        console.log("[InstructionsSection] No text or associations, skipping", {
-          text: instruction.text,
-          associationsLength: associations?.length,
-        });
-        return;
-      }
-
-      const stepAssociations = associations.filter((a) => a.step === index + 1);
-      console.log("[InstructionsSection] Step associations:", {
-        step: index + 1,
-        associations: stepAssociations.map((a) => ({
-          ingredient: a.ingredient,
-          step: a.step,
-        })),
-      });
-
-      // Get ingredient IDs from associations
-      const ingredientIds = stepAssociations
-        .map((assoc) => {
-          // Find the ingredient that matches this association
-          const matchingIngredient = ingredients.find((ing) => {
-            const ingText = (ing.note || ing.display || "")
-              .toLowerCase()
-              .trim();
-            const assocText = assoc.ingredient.toLowerCase().trim();
-            return (
-              ingText === assocText ||
-              ingText.includes(assocText) ||
-              assocText.includes(ingText)
-            );
-          });
-
-          if (!matchingIngredient) {
-            console.log("[InstructionsSection] Could not find ingredient:", {
-              association: assoc.ingredient,
-              availableIngredients: ingredients.map(
-                (ing) => ing.note || ing.display
-              ),
-            });
-          }
-
-          return matchingIngredient?.referenceId;
-        })
-        .filter((id): id is string => id !== undefined);
-
-      console.log("[InstructionsSection] Found ingredient IDs:", {
-        step: index + 1,
-        ingredientIds,
-        matchedIngredients: ingredients
-          .filter((ing) => ingredientIds.includes(ing.referenceId))
-          .map((ing) => ing.note || ing.display),
-      });
-
-      setReferencedIngredientIds(ingredientIds);
-    };
-    fetchIngredients();
-  }, [instruction.text, ingredients, associations, index]);
+  const [hoveredIngredient, setHoveredIngredient] = useState<string | null>(
+    null
+  );
 
   const toggleCompleted = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -215,7 +131,6 @@ const InstructionCard = ({
   const handleStepHover = (hovering: boolean) => {
     setIsStepHovered(hovering);
     if (hovering) {
-      // Pass the step number (1-based) instead of ingredient IDs
       onIngredientHover([String(index + 1)], true);
     } else {
       onIngredientHover(undefined);
@@ -223,12 +138,69 @@ const InstructionCard = ({
   };
 
   // Get highlights for this step
-  const highlights = associations
-    .filter((assoc) => assoc.step === index + 1)
-    .map((assoc) => ({
-      text: assoc.text,
-      ingredient: assoc.ingredient,
-    }));
+  const stepHighlights = useMemo(() => {
+    const stepAssociations = associations.filter(
+      (assoc) => assoc.step === index + 1
+    );
+
+    return stepAssociations
+      .map((assoc) => {
+        // Find the matching ingredient
+        const matchingIngredient = ingredients.find((ing) => {
+          const ingText = (ing.note || ing.display || "").toLowerCase().trim();
+          const assocText = assoc.ingredient.toLowerCase().trim();
+          return (
+            ingText === assocText ||
+            ingText.includes(assocText) ||
+            assocText.includes(ingText)
+          );
+        });
+
+        if (!matchingIngredient) return null;
+
+        return {
+          text: assoc.text,
+          ingredient: matchingIngredient.referenceId,
+        };
+      })
+      .filter((h): h is NonNullable<typeof h> => h !== null);
+  }, [associations, index, ingredients]);
+
+  // Convert step highlights to highlighted text format based on current state
+  const activeHighlights = useMemo(() => {
+    return stepHighlights
+      .filter((h) =>
+        // Only show highlights for hovered ingredient or all if step is highlighted
+        hoveredIngredient
+          ? h.ingredient === hoveredIngredient
+          : highlightedIngredientIds.has(h.ingredient)
+      )
+      .map((h) => ({
+        text: h.text,
+        className:
+          "cursor-pointer transition-colors duration-200 bg-amber-100 text-amber-900",
+        onMouseEnter: () => {
+          setHoveredIngredient(h.ingredient);
+          onIngredientHover([h.ingredient]);
+        },
+        onMouseLeave: (e: React.MouseEvent) => {
+          const relatedTarget = e.relatedTarget as HTMLElement;
+          if (
+            !relatedTarget?.closest("[data-ingredient-id]") &&
+            !isStepHovered
+          ) {
+            setHoveredIngredient(null);
+            onIngredientHover(undefined);
+          }
+        },
+      }));
+  }, [
+    stepHighlights,
+    highlightedIngredientIds,
+    hoveredIngredient,
+    isStepHovered,
+    onIngredientHover,
+  ]);
 
   return (
     <div
@@ -238,7 +210,10 @@ const InstructionCard = ({
           : "border-gray-100"
       }`}
       onMouseEnter={() => handleStepHover(true)}
-      onMouseLeave={() => handleStepHover(false)}
+      onMouseLeave={() => {
+        handleStepHover(false);
+        setHoveredIngredient(null);
+      }}
     >
       <div
         className={`flex items-center justify-between p-4 cursor-pointer transition-colors ${
@@ -281,11 +256,7 @@ const InstructionCard = ({
         {instruction.text && (
           <HighlightedText
             text={instruction.text}
-            highlights={highlights}
-            highlightedIngredientIds={highlightedIngredientIds}
-            isHighlighted={isHighlighted}
-            onIngredientHover={onIngredientHover}
-            isStepHovered={isStepHovered}
+            highlights={activeHighlights}
           />
         )}
       </div>

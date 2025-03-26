@@ -35,19 +35,6 @@ class OpenAIProvider implements LLMProvider {
     ingredients: RecipeIngredient[],
     steps: RecipeStep[]
   ): Promise<IngredientAssociation[]> {
-    // Prepare the input data
-    const ingredientsData = ingredients.map((ing) => ({
-      name: ing.note || ing.display || "",
-      amount: ing.quantity
-        ? `${ing.quantity} ${ing.unit?.name || ""}`.trim()
-        : undefined,
-      description: ing.display || ing.note || "",
-    }));
-
-    const stepsData = steps.map((step) => ({
-      description: step.text || "",
-    }));
-
     try {
       const response = await this.client.chat.completions.create({
         model: this.model,
@@ -62,16 +49,32 @@ class OpenAIProvider implements LLMProvider {
             content: `Analyze these recipe ingredients and steps to create ingredient associations. For each ingredient, find the exact text from the steps that mentions it.
 
 Ingredients:
-${JSON.stringify(ingredientsData, null, 2)}
+${JSON.stringify(
+  ingredients.map((ing) => ({
+    name: ing.note || ing.display || "",
+    amount: ing.quantity
+      ? `${ing.quantity} ${ing.unit?.name || ""}`.trim()
+      : undefined,
+    description: ing.display || ing.note || "",
+  })),
+  null,
+  2
+)}
 
 Steps:
-${JSON.stringify(stepsData, null, 2)}
+${JSON.stringify(
+  steps.map((step) => ({
+    description: step.text || "",
+  })),
+  null,
+  2
+)}
 
 Return a JSON object with an "associations" array containing objects with:
 - ingredient: The ingredient name
 - amount: The amount (if available)
 - step: The step number (1-based)
-- text: The exact text from the step that mentions the ingredient
+- text: The minimal text from the step that mentions this ingredient
 
 For example:
 {
@@ -86,9 +89,12 @@ For example:
 }
 
 Important:
-- Return the exact text from the step that mentions each ingredient
+- The text field should contain ONLY the minimal text that references the ingredient
+- For example, if the step says "mix the sliced steak and cornstarch", use just "steak" or "the sliced steak"
+- If the step says "combine water, sugar, and salt", use just "water" or "the water"
+- Do not include other ingredients or actions in the text field
 - If an ingredient appears multiple times in a step, create separate associations
-- The text field should be the minimal but complete word or phrase that makes sense when highlighted
+- The text should be a complete word or phrase that makes sense when highlighted
 - Do not paraphrase or describe how the ingredient is used, just return the exact text`,
           },
         ],
