@@ -16,7 +16,7 @@ const openai = new OpenAI({
 
 export async function findIngredientAssociations(
   ingredients: RecipeIngredient[],
-  steps: RecipeStep[]
+  instructions: RecipeStep[]
 ): Promise<IngredientAssociation[]> {
   try {
     // Log API key securely (first/last 4 chars only)
@@ -39,58 +39,26 @@ export async function findIngredientAssociations(
       description: ing.display || ing.note || "",
     }));
 
-    const stepsData = steps.map((step) => ({
+    const stepsData = instructions.map((step) => ({
       description: step.text || "",
     }));
 
-    const prompt = `
+    const prompt = `Given these recipe ingredients and instructions, create an array of associations between ingredients and the steps they are used in. Include ALL mentions of ingredients, including when they are referenced as "more [ingredient]" or "additional [ingredient]" for garnish/serving.
+
+Ingredients:
+${ingredients.map((ing) => `- ${ing.note || ing.display}`).join("\n")}
+
 Instructions:
+${instructions.map((step, i) => `${i + 1}. ${step.text}`).join("\n")}
 
-You will be given two JSON objects and must return a JSON object containing an array of ingredient associations.
+Return a JSON object with a single "associations" array containing objects with these properties:
+- ingredient: the ingredient name as listed in the ingredients list
+- amount: the amount of the ingredient (if specified in the ingredients list)
+- step: the step number where the ingredient is used (1-based)
+- usage: brief description of how the ingredient is used in that step
 
-Ingredients List: A list of ingredients, where each ingredient has the following fields:
-name: The name of the ingredient (e.g., "canola oil" or "salt and pepper").
-amount: The optional amount of the ingredient (e.g., "1/4 cup"). Some ingredients may not have amounts.
-description: An optional description (e.g., "oil").
-
-Steps List: A list of steps, where each step has the following fields:
-description: A description of the step that may contain the ingredients listed in the Ingredients List.
-
-Input:
-Ingredients: ${JSON.stringify(ingredientsData, null, 2)}
-Steps: ${JSON.stringify(stepsData, null, 2)}
-
-Required Output Format:
-You MUST return a JSON object with an "associations" field containing an array of objects. Each object must have:
-- ingredient: The exact name from the Ingredients List
-- amount: The amount from the Ingredients List (omit if not available)
-- step: The step number (1-based)
-- usage: A brief description of how the ingredient is used in that step
-
-Example response format:
-{
-  "associations": [
-    {
-      "ingredient": "canola oil",
-      "amount": "1/4 cup",
-      "step": 1,
-      "usage": "used for frying"
-    },
-    {
-      "ingredient": "salt",
-      "step": 2,
-      "usage": "seasoning"
-    }
-  ]
-}
-
-Critical Requirements:
-1. Response MUST be a JSON object with an "associations" array
-2. Each ingredient name MUST match exactly with the names in the Ingredients List
-3. Include the amount field only if it's available in the Ingredients List
-4. The step field must be a number (1-based)
-5. Keep usage descriptions brief and focused
-`;
+Include ALL ingredient mentions, even if they reference "more" of an ingredient that was already used.
+Format the response as a JSON object only, no other text.`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo-1106", // Using the JSON-capable model

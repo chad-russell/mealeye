@@ -6,6 +6,11 @@ import InstructionsSection from "./InstructionsSection";
 import IngredientsList from "./IngredientsList";
 import { type IngredientAssociation } from "@/app/lib/utils/ingredient-matching";
 import { findIngredientAssociations } from "@/app/lib/server/actions";
+import {
+  createIngredientStepMapping,
+  getIngredientsForStep,
+  getStepsForIngredient,
+} from "@/app/lib/utils/ingredient-mapping";
 
 type RecipeStep = components["schemas"]["RecipeStep"];
 type ApiIngredient = components["schemas"]["RecipeIngredient-Output"];
@@ -47,6 +52,11 @@ export default function RecipeContent({
   const [associations, setAssociations] = useState<IngredientAssociation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Create the ingredient-step mapping when associations change
+  const mapping = useMemo(() => {
+    return createIngredientStepMapping(ingredients, associations);
+  }, [ingredients, associations]);
+
   // Fetch ingredient associations using server action when ingredients or instructions change
   useEffect(() => {
     const fetchAssociations = async () => {
@@ -84,24 +94,13 @@ export default function RecipeContent({
 
     completedInstructions.forEach((completed, index) => {
       if (completed) {
-        const stepAssociations = associations.filter(
-          (assoc) => assoc.step === index + 1
-        );
-        stepAssociations.forEach((assoc) => {
-          const ingredient = ingredients.find(
-            (ing) =>
-              (ing.note || ing.display || "").toLowerCase() ===
-              assoc.ingredient.toLowerCase()
-          );
-          if (ingredient?.referenceId) {
-            newUsedIngredients.add(ingredient.referenceId);
-          }
-        });
+        const stepIngredients = getIngredientsForStep(index + 1, mapping);
+        stepIngredients.forEach((id) => newUsedIngredients.add(id));
       }
     });
 
     setUsedIngredients(newUsedIngredients);
-  }, [completedInstructions, associations, ingredients]);
+  }, [completedInstructions, mapping]);
 
   // Guard against undefined props
   if (!instructions?.length || !ingredients?.length) {
@@ -118,64 +117,23 @@ export default function RecipeContent({
       return;
     }
 
-    // Find all steps that use any of the hovered ingredients
-    const hoveredIngredients = ingredients.filter((ing) =>
-      ingredientIds.includes(ing.referenceId)
-    );
-
-    // Get the ingredient names for matching against associations
-    const hoveredIngredientNames = hoveredIngredients.map((ing) =>
-      (ing.note || ing.display || "").toLowerCase()
-    );
-
-    // Find all steps that use these ingredients
-    const relevantStepNumbers = associations
-      .filter((assoc) => {
-        const assocIngredient = assoc.ingredient.toLowerCase();
-        return hoveredIngredientNames.some(
-          (name) =>
-            // Check if either contains the other
-            name.includes(assocIngredient) || assocIngredient.includes(name)
-        );
-      })
-      .map((assoc) => assoc.step);
-
-    console.log("[RecipeContent] Hover debug:", {
-      isStepHover,
-      hoveredIngredients: hoveredIngredients.map((ing) => ({
-        id: ing.referenceId,
-        name: ing.note || ing.display,
-      })),
-      hoveredNames: hoveredIngredientNames,
-      relevantSteps: relevantStepNumbers,
-    });
-
-    // For ingredient hover, only highlight the hovered ingredient and its steps
-    if (!isStepHover) {
+    if (isStepHover) {
+      // For step hover, the first ID is actually the step number
+      const stepNumber = parseInt(ingredientIds[0]);
+      console.log("[RecipeContent] Step hover:", { stepNumber, mapping });
+      const ingredientsInStep = getIngredientsForStep(stepNumber, mapping);
+      console.log(
+        "[RecipeContent] Found ingredients for step:",
+        ingredientsInStep
+      );
+      setHighlightedIngredientIds(new Set(ingredientsInStep));
+      setHighlightedStepNumbers(new Set([stepNumber]));
+    } else {
+      // For ingredient hover, get all steps that use the ingredient
+      const steps = getStepsForIngredient(ingredientIds[0], mapping);
       setHighlightedIngredientIds(new Set(ingredientIds));
-      setHighlightedStepNumbers(new Set(relevantStepNumbers));
-      return;
+      setHighlightedStepNumbers(new Set(steps));
     }
-
-    // For step hover, highlight all ingredients used in the step
-    const allIngredientIds = new Set<string>();
-
-    // Add all ingredients used in the hovered step
-    associations
-      .filter((assoc) => relevantStepNumbers.includes(assoc.step))
-      .forEach((assoc) => {
-        const ingredient = ingredients.find((ing) => {
-          const ingName = (ing.note || ing.display || "").toLowerCase();
-          const assocName = assoc.ingredient.toLowerCase();
-          return ingName.includes(assocName) || assocName.includes(ingName);
-        });
-        if (ingredient?.referenceId) {
-          allIngredientIds.add(ingredient.referenceId);
-        }
-      });
-
-    setHighlightedIngredientIds(allIngredientIds);
-    setHighlightedStepNumbers(new Set(relevantStepNumbers));
   };
 
   return (

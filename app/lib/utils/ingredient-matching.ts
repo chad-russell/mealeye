@@ -131,74 +131,62 @@ export function createLLMProvider(
 }
 
 // Helper function to find ingredients in text using LLM associations
-export async function findIngredientsInText(
+export function findIngredientsInText(
   text: string,
   ingredients: RecipeIngredient[],
   associations: IngredientAssociation[]
-): Promise<RecipeIngredient[]> {
-  console.log("[findIngredientsInText] Input:", {
-    text,
-    numIngredients: ingredients.length,
-    numAssociations: associations.length,
-  });
+): string[] {
+  const cleanText = text.toLowerCase().trim();
+  const foundIngredientIds = new Set<string>();
 
-  // Find all associations that match this step's text
-  const stepAssociations = associations.filter((assoc) => {
-    // Clean up the ingredient text for matching
-    const cleanIngredient = escapeRegExp(assoc.ingredient.toLowerCase().trim());
-    const cleanText = text.toLowerCase();
+  // Get associations for this specific text
+  const relevantAssociations = associations.filter(
+    (assoc) => assoc.step === findStepNumberFromText(text, associations)
+  );
 
-    // Try to match with and without word boundaries
-    const regexStrict = new RegExp(`\\b${cleanIngredient}\\b`, "gi");
-    const regexLoose = new RegExp(cleanIngredient, "gi");
+  // Helper function to clean ingredient names
+  const cleanIngredientName = (name: string) =>
+    name
+      .toLowerCase()
+      .split(",")[0]
+      .trim()
+      .replace(/^\d+(\.\d+)?\s*(tablespoons?|teaspoons?|cups?|lb)\s+/, "")
+      .replace(/^more\s+/, ""); // Remove "more" prefix
 
-    const matches = regexStrict.test(cleanText) || regexLoose.test(cleanText);
-    console.log("[findIngredientsInText] Testing association:", {
-      ingredient: assoc.ingredient,
-      regexStrict: regexStrict.toString(),
-      regexLoose: regexLoose.toString(),
-      matches,
+  // Process each association
+  relevantAssociations.forEach((assoc) => {
+    const assocIngredient = cleanIngredientName(assoc.ingredient);
+
+    // Find matching ingredient, handling both direct and "more" references
+    const ingredient = ingredients.find((ing) => {
+      const ingName = cleanIngredientName(ing.note || ing.display || "");
+      const textToCheck = cleanText.replace(/more\s+/, ""); // Remove "more" from the text for matching
+
+      return (
+        ingName.includes(assocIngredient) ||
+        assocIngredient.includes(ingName) ||
+        textToCheck.includes(ingName)
+      );
     });
-    return matches;
+
+    if (ingredient?.referenceId) {
+      foundIngredientIds.add(ingredient.referenceId);
+    }
   });
 
-  console.log(
-    "[findIngredientsInText] Matching associations:",
-    stepAssociations
+  return Array.from(foundIngredientIds);
+}
+
+// Helper function to find the step number from text
+function findStepNumberFromText(
+  text: string,
+  associations: IngredientAssociation[]
+): number {
+  // Find the association that matches this text
+  const association = associations.find((assoc) =>
+    text.toLowerCase().includes(assoc.usage?.toLowerCase() || "")
   );
-
-  // Return the ingredients that are used in this step
-  const matchedIngredients = ingredients.filter((ing) =>
-    stepAssociations.some((assoc) => {
-      const ingText = (ing.note || ing.display || "").toLowerCase().trim();
-      const assocText = assoc.ingredient.toLowerCase().trim();
-
-      // Try exact match first, then partial match
-      const exactMatch = ingText === assocText;
-      const partialMatch =
-        ingText.includes(assocText) || assocText.includes(ingText);
-
-      console.log("[findIngredientsInText] Testing ingredient match:", {
-        ingredient: ing.note || ing.display,
-        association: assoc.ingredient,
-        exactMatch,
-        partialMatch,
-        matches: exactMatch || partialMatch,
-      });
-
-      return exactMatch || partialMatch;
-    })
-  );
-
-  console.log(
-    "[findIngredientsInText] Final matched ingredients:",
-    matchedIngredients.map((ing) => ({
-      id: ing.referenceId,
-      text: ing.note || ing.display,
-    }))
-  );
-
-  return matchedIngredients;
+  return association?.step || 0;
 }
 
 // Helper function to escape special characters in regex

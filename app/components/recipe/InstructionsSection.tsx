@@ -20,7 +20,7 @@ interface InstructionCardProps {
   onInstructionComplete: (index: number, completed: boolean) => void;
   highlightedIngredientIds: Set<string>;
   isHighlighted: boolean;
-  onIngredientHover: (ingredientIds: string[] | undefined) => void;
+  onIngredientHover: (ids: string[] | undefined, isStepHover?: boolean) => void;
   associations: IngredientAssociation[];
 }
 
@@ -36,8 +36,8 @@ const InstructionCard = ({
 }: InstructionCardProps) => {
   const [isCompleted, setIsCompleted] = useState(false);
   const [isStepHovered, setIsStepHovered] = useState(false);
-  const [referencedIngredients, setReferencedIngredients] = useState<
-    RecipeIngredient[]
+  const [referencedIngredientIds, setReferencedIngredientIds] = useState<
+    string[]
   >([]);
 
   // Find ingredient references in the instruction text using our new matching system
@@ -46,12 +46,12 @@ const InstructionCard = ({
       if (!instruction.text || !associations?.length) return;
 
       const stepAssociations = associations.filter((a) => a.step === index + 1);
-      const found = await findIngredientsInText(
+      const foundIds = findIngredientsInText(
         instruction.text,
         ingredients,
         stepAssociations
       );
-      setReferencedIngredients(found);
+      setReferencedIngredientIds(foundIds);
     };
     fetchIngredients();
   }, [instruction.text, ingredients, associations, index]);
@@ -65,8 +65,9 @@ const InstructionCard = ({
 
   const handleStepHover = (hovering: boolean) => {
     setIsStepHovered(hovering);
-    if (hovering && referencedIngredients.length > 0) {
-      onIngredientHover(referencedIngredients.map((ing) => ing.referenceId));
+    if (hovering) {
+      // Pass the step number (1-based) instead of ingredient IDs
+      onIngredientHover([String(index + 1)], true);
     } else {
       onIngredientHover(undefined);
     }
@@ -74,6 +75,11 @@ const InstructionCard = ({
 
   const renderInstructionText = (text: string) => {
     let result = text;
+
+    // Get the referenced ingredients from their IDs
+    const referencedIngredients = ingredients.filter((ing) =>
+      referencedIngredientIds.includes(ing.referenceId)
+    );
 
     // Sort ingredients by length (longest first) to handle overlapping matches correctly
     const sortedIngredients = [...referencedIngredients].sort((a, b) => {
@@ -195,7 +201,7 @@ interface InstructionsSectionProps {
   instructions: RecipeStep[];
   ingredients: RecipeIngredient[];
   onInstructionComplete: (completedSteps: boolean[]) => void;
-  onIngredientHover: (ingredientIds: string[] | undefined) => void;
+  onIngredientHover: (ids: string[] | undefined, isStepHover?: boolean) => void;
   highlightedIngredientIds: Set<string>;
   highlightedStepNumbers: Set<number>;
   associations: IngredientAssociation[];
