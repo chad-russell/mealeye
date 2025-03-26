@@ -188,11 +188,17 @@ const InstructionCard = ({
           onIngredientHover([h.ingredient], false);
         },
         onMouseLeave: (e: React.MouseEvent) => {
-          const relatedTarget = e.relatedTarget as HTMLElement;
-          if (!relatedTarget?.closest("[data-ingredient-id]")) {
+          const relatedTarget = e.relatedTarget as Element | null;
+          if (!relatedTarget?.closest) {
+            setHoveredIngredient(null);
+            onIngredientHover(undefined);
+            return;
+          }
+
+          if (!relatedTarget.closest("[data-ingredient-id]")) {
             setHoveredIngredient(null);
             // If we're still within the instruction card, trigger the step hover
-            if (relatedTarget?.closest(".instruction-card")) {
+            if (relatedTarget.closest(".instruction-card")) {
               onIngredientHover([String(stepNumber)], true);
             } else {
               onIngredientHover(undefined);
