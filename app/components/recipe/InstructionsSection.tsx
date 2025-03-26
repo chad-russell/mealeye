@@ -209,6 +209,10 @@ const InstructionCard = ({
     onIngredientHover,
   ]);
 
+  isHighlighted =
+    isHighlighted &&
+    (hoveredStepNumber !== null ? hoveredStepNumber === stepNumber : true);
+
   return (
     <div
       className={`mb-4 rounded-lg border shadow-sm overflow-hidden bg-white transition-all duration-200 instruction-card ${

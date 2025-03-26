@@ -64,15 +64,106 @@ export default function RecipeContent({
 
       setIsLoading(true);
       try {
-        const newAssociations = await findIngredientAssociations(
-          ingredients,
-          instructions
-        );
-        if (newAssociations) {
-          setAssociations(newAssociations);
-        }
+        // Comment out the API call for development
+        // const newAssociations = await findIngredientAssociations(
+        //   ingredients,
+        //   instructions
+        // );
+        // if (newAssociations) {
+        //   setAssociations(newAssociations);
+        // }
+
+        // Hardcoded associations for development
+        const hardcodedAssociations = [
+          {
+            ingredient: "flank steak or flap steak",
+            amount: "1.5 lb",
+            step: 1,
+            text: "the sliced steak",
+          },
+          {
+            ingredient: "cornstarch",
+            amount: "¼ cup",
+            step: 1,
+            text: "cornstarch",
+          },
+          {
+            ingredient: "water",
+            amount: "½ cup",
+            step: 2,
+            text: "the water",
+          },
+          {
+            ingredient: "packed brown sugar",
+            amount: "⅓ cup",
+            step: 2,
+            text: "brown sugar",
+          },
+          {
+            ingredient: "low-sodium soy sauce",
+            amount: "¼ cup and 2 tablespoons",
+            step: 2,
+            text: "soy sauce",
+          },
+          {
+            ingredient: "sesame oil",
+            amount: "1.5 tablespoons",
+            step: 2,
+            text: "sesame oil",
+          },
+          {
+            ingredient: "minced garlic",
+            amount: "1 tablespoon",
+            step: 2,
+            text: "garlic",
+          },
+          {
+            ingredient: "minced ginger",
+            amount: "2 teaspoons",
+            step: 2,
+            text: "ginger",
+          },
+          {
+            ingredient: "red pepper flakes",
+            amount: "1 teaspoon",
+            step: 2,
+            text: "red pepper flakes",
+          },
+          {
+            ingredient: "black pepper",
+            amount: "1 teaspoon",
+            step: 2,
+            text: "black pepper",
+          },
+          {
+            ingredient: "scallions",
+            amount: "2",
+            step: 3,
+            text: "sliced scallions",
+          },
+          {
+            ingredient: "white sesame seeds",
+            amount: "1 tablespoon",
+            step: 3,
+            text: "sesame seeds",
+          },
+          {
+            ingredient: "cooked rice",
+            amount: "unknown",
+            step: 4,
+            text: "rice",
+          },
+          {
+            ingredient: "scallions",
+            amount: "unknown",
+            step: 4,
+            text: "more scallions",
+          },
+        ];
+
+        setAssociations(hardcodedAssociations);
       } catch (error) {
-        console.error("[RecipeContent] Error fetching associations:", error);
+        console.error("[RecipeContent] Error setting associations:", error);
       } finally {
         setIsLoading(false);
       }
@@ -84,16 +175,22 @@ export default function RecipeContent({
   // Update used ingredients when instructions are completed
   useEffect(() => {
     const newUsedIngredients = new Set<string>();
+    const allIngredients = new Set(ingredients.map((ing) => ing.referenceId));
 
-    completedInstructions.forEach((completed, index) => {
-      if (completed) {
-        const stepIngredients = getIngredientsForStep(index + 1, mapping);
-        stepIngredients.forEach((id) => newUsedIngredients.add(id));
+    // For each ingredient, check if all steps that use it are completed
+    allIngredients.forEach((ingredientId) => {
+      const stepsUsingIngredient = getStepsForIngredient(ingredientId, mapping);
+      const allStepsCompleted = stepsUsingIngredient.every(
+        (stepNum) => completedInstructions[stepNum - 1]
+      );
+
+      if (allStepsCompleted && stepsUsingIngredient.length > 0) {
+        newUsedIngredients.add(ingredientId);
       }
     });
 
     setUsedIngredients(newUsedIngredients);
-  }, [completedInstructions, mapping]);
+  }, [completedInstructions, mapping, ingredients]);
 
   // Guard against undefined props
   if (!instructions?.length || !ingredients?.length) {
