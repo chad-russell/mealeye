@@ -1,8 +1,8 @@
 import { Clock, Users, ChefHat, UtensilsCrossed } from "lucide-react";
 import Image from "next/image";
-import { client } from "@/app/lib/server/api";
-import { recipeImageUrl } from "@/app/lib/utils/url";
-import { components } from "@/app/lib/types/openapi-generated";
+import { client } from "@/lib/server/api";
+import { recipeImageUrl } from "@/lib/utils/url";
+import { components } from "@/lib/types/openapi-generated";
 import HeroImage from "@/app/components/recipe/HeroImage";
 import RecipeMetadata from "@/app/components/recipe/RecipeMetadata";
 import RecipeContent from "@/app/components/recipe/RecipeContent";
@@ -63,6 +63,7 @@ export default async function RecipePage({
         {/* Recipe Content */}
         <div className="mt-8">
           <RecipeContent
+            recipeId={recipe.id || ""}
             instructions={recipe.recipeInstructions || []}
             ingredients={recipe.recipeIngredient || []}
           />

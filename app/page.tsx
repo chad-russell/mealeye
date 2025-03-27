@@ -1,5 +1,5 @@
 import RecipesList from "./components/RecipesList";
-import { client } from "./lib/server/api";
+import { client } from "@/lib/server/api";
 
 export default async function Home() {
   const recipes = await client.GET("/api/recipes", {

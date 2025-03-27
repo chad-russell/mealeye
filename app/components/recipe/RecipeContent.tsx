@@ -1,16 +1,19 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { components } from "@/app/lib/types/openapi-generated";
+import { components } from "@/lib/types/openapi-generated";
 import InstructionsSection from "./InstructionsSection";
 import IngredientsList from "./IngredientsList";
-import { type IngredientAssociation } from "@/app/lib/utils/ingredient-matching";
-import { findIngredientAssociations } from "@/app/lib/server/actions";
+import { type IngredientAssociation } from "@/lib/utils/ingredient-matching";
+import { findIngredientAssociations } from "@/lib/server/actions";
 import {
   createIngredientStepMapping,
   getIngredientsForStep,
   getStepsForIngredient,
-} from "@/app/lib/utils/ingredient-mapping";
+} from "@/lib/utils/ingredient-mapping";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle, RefreshCw } from "lucide-react";
 
 type RecipeStep = components["schemas"]["RecipeStep"];
 type ApiIngredient = components["schemas"]["RecipeIngredient-Output"];
@@ -19,11 +22,13 @@ type RecipeIngredient = ApiIngredient & {
 };
 
 interface RecipeContentProps {
+  recipeId: string;
   instructions: RecipeStep[];
   ingredients: ApiIngredient[];
 }
 
 export default function RecipeContent({
+  recipeId,
   instructions = [],
   ingredients: rawIngredients = [],
 }: RecipeContentProps) {
@@ -51,126 +56,14 @@ export default function RecipeContent({
   );
   const [associations, setAssociations] = useState<IngredientAssociation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [associationStatus, setAssociationStatus] = useState<
+    "valid" | "outdated" | "none"
+  >("none");
 
   // Create the ingredient-step mapping when associations change
   const mapping = useMemo(() => {
     return createIngredientStepMapping(ingredients, associations);
   }, [ingredients, associations]);
-
-  // Fetch ingredient associations using server action when ingredients or instructions change
-  useEffect(() => {
-    const fetchAssociations = async () => {
-      if (ingredients.length === 0 || instructions.length === 0) return;
-
-      setIsLoading(true);
-      try {
-        // Comment out the API call for development
-        // const newAssociations = await findIngredientAssociations(
-        //   ingredients,
-        //   instructions
-        // );
-        // if (newAssociations) {
-        //   setAssociations(newAssociations);
-        // }
-
-        // Hardcoded associations for development
-        const hardcodedAssociations = [
-          {
-            ingredient: "flank steak or flap steak",
-            amount: "1.5 lb",
-            step: 1,
-            text: "the sliced steak",
-          },
-          {
-            ingredient: "cornstarch",
-            amount: "¼ cup",
-            step: 1,
-            text: "cornstarch",
-          },
-          {
-            ingredient: "water",
-            amount: "½ cup",
-            step: 2,
-            text: "the water",
-          },
-          {
-            ingredient: "packed brown sugar",
-            amount: "⅓ cup",
-            step: 2,
-            text: "brown sugar",
-          },
-          {
-            ingredient: "low-sodium soy sauce",
-            amount: "¼ cup and 2 tablespoons",
-            step: 2,
-            text: "soy sauce",
-          },
-          {
-            ingredient: "sesame oil",
-            amount: "1.5 tablespoons",
-            step: 2,
-            text: "sesame oil",
-          },
-          {
-            ingredient: "minced garlic",
-            amount: "1 tablespoon",
-            step: 2,
-            text: "garlic",
-          },
-          {
-            ingredient: "minced ginger",
-            amount: "2 teaspoons",
-            step: 2,
-            text: "ginger",
-          },
-          {
-            ingredient: "red pepper flakes",
-            amount: "1 teaspoon",
-            step: 2,
-            text: "red pepper flakes",
-          },
-          {
-            ingredient: "black pepper",
-            amount: "1 teaspoon",
-            step: 2,
-            text: "black pepper",
-          },
-          {
-            ingredient: "scallions",
-            amount: "2",
-            step: 3,
-            text: "sliced scallions",
-          },
-          {
-            ingredient: "white sesame seeds",
-            amount: "1 tablespoon",
-            step: 3,
-            text: "sesame seeds",
-          },
-          {
-            ingredient: "cooked rice",
-            amount: "unknown",
-            step: 4,
-            text: "rice",
-          },
-          {
-            ingredient: "scallions",
-            amount: "unknown",
-            step: 4,
-            text: "more scallions",
-          },
-        ];
-
-        setAssociations(hardcodedAssociations);
-      } catch (error) {
-        console.error("[RecipeContent] Error setting associations:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchAssociations();
-  }, [ingredients, instructions]);
 
   // Update used ingredients when instructions are completed
   useEffect(() => {
@@ -226,27 +119,90 @@ export default function RecipeContent({
     }
   };
 
+  const handleGenerateAssociations = async () => {
+    setIsLoading(true);
+    try {
+      const result = await findIngredientAssociations(
+        recipeId,
+        ingredients,
+        instructions
+      );
+      setAssociations(result.associations);
+      setAssociationStatus(result.status);
+    } catch (error) {
+      console.error("[RecipeContent] Error generating associations:", error);
+      setAssociationStatus("none");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-      <div>
+    <div className="space-y-6">
+      {associationStatus === "none" && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>No Ingredient Associations</AlertTitle>
+          <AlertDescription className="flex items-center justify-between">
+            <span>
+              This recipe doesn't have any ingredient associations yet.
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleGenerateAssociations}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                "Generate Associations"
+              )}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {associationStatus === "outdated" && (
+        <Alert variant="warning">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Outdated Associations</AlertTitle>
+          <AlertDescription className="flex items-center justify-between">
+            <span>
+              The recipe has been modified since the associations were last
+              generated.
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleGenerateAssociations}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                "Regenerate Associations"
+              )}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <IngredientsList
           ingredients={ingredients}
           completedInstructions={completedInstructions}
           highlightedIngredientIds={highlightedIngredientIds}
           onIngredientHover={(id) =>
-            handleIngredientHover(id ? [id] : undefined, false)
+            handleIngredientHover(id ? [id] : undefined)
           }
           usedIngredients={usedIngredients}
         />
-      </div>
-      <div>
         <InstructionsSection
           instructions={instructions}
           ingredients={ingredients}
           onInstructionComplete={setCompletedInstructions}
-          onIngredientHover={(ids, isStepHover) =>
-            handleIngredientHover(ids, isStepHover)
-          }
+          onIngredientHover={handleIngredientHover}
           highlightedIngredientIds={highlightedIngredientIds}
           highlightedStepNumbers={highlightedStepNumbers}
           associations={associations}

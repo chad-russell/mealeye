@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { ChevronDown, ChevronUp, CheckCircle2 } from "lucide-react";
-import { components } from "@/app/lib/types/openapi-generated";
+import { components } from "@/lib/types/openapi-generated";
 import {
   findIngredientsInText,
   type IngredientAssociation,
-} from "@/app/lib/utils/ingredient-matching";
+} from "@/lib/utils/ingredient-matching";
 
 type RecipeStep = components["schemas"]["RecipeStep"];
 type RecipeIngredient = components["schemas"]["RecipeIngredient-Output"] & {

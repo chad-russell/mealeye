@@ -1,4 +1,4 @@
-import { components } from "@/app/lib/types/openapi-generated";
+import { components } from "@/lib/types/openapi-generated";
 import OpenAI from "openai";
 
 type RecipeIngredient = components["schemas"]["RecipeIngredient-Output"] & {

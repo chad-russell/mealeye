@@ -1,5 +1,5 @@
 import { Clock, Users, ChefHat, UtensilsCrossed } from "lucide-react";
-import { components } from "@/app/lib/types/openapi-generated";
+import { components } from "@/lib/types/openapi-generated";
 
 type Recipe = components["schemas"]["Recipe-Output"];
 

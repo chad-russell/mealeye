@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { recipeImageUrl } from "@/app/lib/utils/url";
+import { recipeImageUrl } from "@/lib/utils/url";
 
 interface HeroImageProps {
   recipeId: string;

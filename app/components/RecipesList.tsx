@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
-import { RecipeSummary } from "../lib/types/api";
-import { recipeImageUrl } from "../lib/utils/url";
+import { RecipeSummary } from "@/lib/types/api";
+import { recipeImageUrl } from "@/lib/utils/url";
 
 interface RecipesListProps {
   recipes: RecipeSummary[];

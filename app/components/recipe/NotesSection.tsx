@@ -1,4 +1,4 @@
-import { components } from "@/app/lib/types/openapi-generated";
+import { components } from "@/lib/types/openapi-generated";
 import { StickyNote } from "lucide-react";
 
 type RecipeNote = components["schemas"]["RecipeNote"];
