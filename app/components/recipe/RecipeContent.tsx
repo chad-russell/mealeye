@@ -31,6 +31,8 @@ interface RecipeContentProps {
   ingredients: ApiIngredient[];
   associationStatus?: "valid" | "outdated" | "none";
   setAssociationStatus?: (status: "valid" | "outdated" | "none") => void;
+  currentAssociations?: IngredientAssociation[];
+  setCurrentAssociations?: (associations: IngredientAssociation[]) => void;
 }
 
 export default function RecipeContent({
@@ -39,6 +41,8 @@ export default function RecipeContent({
   ingredients: rawIngredients = [],
   associationStatus: externalAssociationStatus,
   setAssociationStatus: setExternalAssociationStatus,
+  currentAssociations: externalAssociations,
+  setCurrentAssociations: setExternalCurrentAssociations,
 }: RecipeContentProps) {
   // Process ingredients to ensure they all have referenceIds
   const ingredients = useMemo(
@@ -62,7 +66,9 @@ export default function RecipeContent({
   const [usedIngredients, setUsedIngredients] = useState<Set<string>>(
     new Set()
   );
-  const [associations, setAssociations] = useState<IngredientAssociation[]>([]);
+  const [internalAssociations, setInternalAssociations] = useState<
+    IngredientAssociation[]
+  >([]);
   const [isLoading, setIsLoading] = useState(false);
   const [internalAssociationStatus, setInternalAssociationStatus] = useState<
     "valid" | "outdated" | "none"
@@ -73,6 +79,9 @@ export default function RecipeContent({
     externalAssociationStatus || internalAssociationStatus;
   const setAssociationStatus =
     setExternalAssociationStatus || setInternalAssociationStatus;
+  const associations = externalAssociations || internalAssociations;
+  const setAssociations =
+    setExternalCurrentAssociations || setInternalAssociations;
 
   // Create the ingredient-step mapping when associations change
   const mapping = useMemo(() => {
@@ -96,8 +105,18 @@ export default function RecipeContent({
       }
     };
 
-    loadAssociations();
-  }, [recipeId, ingredients, instructions, setAssociationStatus]);
+    // Only load associations if we don't have external ones
+    if (!externalAssociations) {
+      loadAssociations();
+    }
+  }, [
+    recipeId,
+    ingredients,
+    instructions,
+    setAssociationStatus,
+    setAssociations,
+    externalAssociations,
+  ]);
 
   // Update used ingredients when instructions are completed
   useEffect(() => {

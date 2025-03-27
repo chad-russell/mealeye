@@ -3,7 +3,11 @@
 import OpenAI from "openai";
 import { components } from "@/lib/types/openapi-generated";
 import { IngredientAssociation } from "../utils/ingredient-matching";
-import { getAssociations, saveAssociations, clearAssociations } from "../db";
+import {
+  getAssociations,
+  saveAssociations,
+  clearAssociations,
+} from "@/app/lib/server/db";
 import { hashRecipe } from "../utils/recipe-hashing";
 
 type RecipeStep = components["schemas"]["RecipeStep"];

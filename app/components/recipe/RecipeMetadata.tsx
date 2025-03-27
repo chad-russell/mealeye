@@ -21,6 +21,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import AssociationEditorDialog from "./AssociationEditorDialog";
+import { type IngredientAssociation } from "@/lib/utils/ingredient-matching";
 
 type Recipe = components["schemas"]["Recipe-Output"];
 
@@ -30,6 +32,8 @@ interface RecipeMetadataProps {
   isLoading: boolean;
   onGenerateAssociations: () => Promise<void>;
   onClearAssociations: () => Promise<void>;
+  onSaveAssociations: (associations: IngredientAssociation[]) => Promise<void>;
+  currentAssociations: IngredientAssociation[];
 }
 
 export default function RecipeMetadata({
@@ -38,6 +42,8 @@ export default function RecipeMetadata({
   isLoading: externalIsLoading,
   onGenerateAssociations,
   onClearAssociations,
+  onSaveAssociations,
+  currentAssociations,
 }: RecipeMetadataProps) {
   const [internalIsLoading, setInternalIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -152,6 +158,14 @@ export default function RecipeMetadata({
                     </Button>
                   )}
                 </div>
+                {associationStatus === "valid" && (
+                  <AssociationEditorDialog
+                    ingredients={recipe.recipeIngredient || []}
+                    instructions={recipe.recipeInstructions || []}
+                    associations={currentAssociations}
+                    onSave={onSaveAssociations}
+                  />
+                )}
               </div>
 
               {/* Add more settings sections here */}
