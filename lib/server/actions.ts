@@ -7,9 +7,7 @@ import { getAssociations, saveAssociations } from "../db";
 import { hashRecipe } from "../utils/recipe-hashing";
 
 type RecipeStep = components["schemas"]["RecipeStep"];
-type RecipeIngredient = components["schemas"]["RecipeIngredient-Output"] & {
-  referenceId: string;
-};
+type ApiIngredient = components["schemas"]["RecipeIngredient-Output"];
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -17,7 +15,7 @@ const openai = new OpenAI({
 });
 
 async function generateAssociationsWithOpenAI(
-  ingredients: RecipeIngredient[],
+  ingredients: ApiIngredient[],
   instructions: RecipeStep[]
 ): Promise<IngredientAssociation[]> {
   // Prepare the input data
@@ -102,8 +100,9 @@ Make sure that:
 
 export async function findIngredientAssociations(
   recipeId: string,
-  ingredients: RecipeIngredient[],
-  instructions: RecipeStep[]
+  ingredients: ApiIngredient[],
+  instructions: RecipeStep[],
+  forceRegenerate: boolean = false
 ): Promise<{
   associations: IngredientAssociation[];
   status: "valid" | "outdated" | "none";
@@ -115,8 +114,8 @@ export async function findIngredientAssociations(
     // Check if we have cached associations
     const cachedResult = await getAssociations(recipeId, recipeHash);
 
-    // If we have associations, check if they're valid
-    if (cachedResult && cachedResult.status === "valid") {
+    // If we have associations and we're not forcing regeneration, return them
+    if (cachedResult && cachedResult.status === "valid" && !forceRegenerate) {
       // Convert the database associations to the expected format
       const formattedAssociations: IngredientAssociation[] =
         cachedResult.associations.map((assoc) => ({
@@ -128,7 +127,7 @@ export async function findIngredientAssociations(
 
       return {
         associations: formattedAssociations,
-        status: "valid",
+        status: formattedAssociations.length > 0 ? "valid" : "none",
       };
     }
 
@@ -150,7 +149,7 @@ export async function findIngredientAssociations(
 
     return {
       associations: newAssociations,
-      status: "valid",
+      status: newAssociations.length > 0 ? "valid" : "none",
     };
   } catch (error) {
     console.error("Error in findIngredientAssociations:", error);

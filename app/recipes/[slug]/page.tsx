@@ -1,15 +1,5 @@
-import { Clock, Users, ChefHat, UtensilsCrossed } from "lucide-react";
-import Image from "next/image";
-import { client } from "@/lib/server/api";
-import { recipeImageUrl } from "@/lib/utils/url";
-import { components } from "@/lib/types/openapi-generated";
-import HeroImage from "@/app/components/recipe/HeroImage";
-import RecipeMetadata from "@/app/components/recipe/RecipeMetadata";
-import RecipeContent from "@/app/components/recipe/RecipeContent";
-import NotesSection from "@/app/components/recipe/NotesSection";
-
-type RecipeNote = components["schemas"]["RecipeNote"];
-type RecipeIngredient = components["schemas"]["RecipeIngredient-Output"];
+import RecipePageContent from "@/app/recipes/[slug]/RecipePageContent";
+import { getRecipe, findIngredientAssociations } from "@/app/actions";
 
 export default async function RecipePage({
   params,
@@ -17,17 +7,10 @@ export default async function RecipePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-
-  const recipeResponse = await client.GET("/api/recipes/{slug}", {
-    params: {
-      path: {
-        slug,
-      },
-    },
-  });
+  const recipe = await getRecipe(slug);
 
   // Handle recipe not found
-  if (!recipeResponse.data) {
+  if (!recipe) {
     return (
       <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
         <div className="text-center">
@@ -43,39 +26,17 @@ export default async function RecipePage({
     );
   }
 
-  const recipe = recipeResponse.data;
+  // Get initial associations status
+  const initialAssociations = await findIngredientAssociations(
+    recipe.id || "",
+    recipe.recipeIngredient || [],
+    recipe.recipeInstructions || []
+  );
 
   return (
-    <div className="min-h-screen bg-[#fafafa]">
-      {/* Hero Section */}
-      {recipe.id && (
-        <HeroImage
-          recipeId={recipe.id}
-          recipeName={recipe.name || "Untitled Recipe"}
-        />
-      )}
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Metadata Section */}
-        <RecipeMetadata recipe={recipe} />
-
-        {/* Recipe Content */}
-        <div className="mt-8">
-          <RecipeContent
-            recipeId={recipe.id || ""}
-            instructions={recipe.recipeInstructions || []}
-            ingredients={recipe.recipeIngredient || []}
-          />
-        </div>
-
-        {/* Notes Section */}
-        {recipe.notes && recipe.notes.length > 0 && (
-          <div className="mt-8">
-            <NotesSection notes={recipe.notes} />
-          </div>
-        )}
-      </div>
-    </div>
+    <RecipePageContent
+      recipe={recipe}
+      initialAssociationStatus={initialAssociations.status}
+    />
   );
 }

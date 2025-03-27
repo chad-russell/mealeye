@@ -9,7 +9,9 @@ import {
 } from "@/lib/utils/ingredient-matching";
 
 type RecipeStep = components["schemas"]["RecipeStep"];
-type RecipeIngredient = components["schemas"]["RecipeIngredient-Output"] & {
+type ApiIngredient = components["schemas"]["RecipeIngredient-Output"];
+
+type RecipeIngredient = ApiIngredient & {
   referenceId: string;
 };
 
@@ -289,7 +291,6 @@ interface InstructionsSectionProps {
   highlightedIngredientIds: Set<string>;
   highlightedStepNumbers: Set<number>;
   associations: IngredientAssociation[];
-  isLoading: boolean;
 }
 
 export default function InstructionsSection({
@@ -300,7 +301,6 @@ export default function InstructionsSection({
   highlightedIngredientIds,
   highlightedStepNumbers,
   associations = [],
-  isLoading = false,
 }: InstructionsSectionProps) {
   const [completedSteps, setCompletedSteps] = useState<boolean[]>(
     new Array(instructions.length).fill(false)

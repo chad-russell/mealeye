@@ -1,46 +1,145 @@
-import { Clock, Users, ChefHat, UtensilsCrossed } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import {
+  Clock,
+  Users,
+  ChefHat,
+  UtensilsCrossed,
+  Settings2,
+  RefreshCw,
+  MoreVertical,
+} from "lucide-react";
 import { components } from "@/lib/types/openapi-generated";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 type Recipe = components["schemas"]["Recipe-Output"];
 
 interface RecipeMetadataProps {
   recipe: Recipe;
+  associationStatus: "valid" | "outdated" | "none";
+  isLoading: boolean;
+  onGenerateAssociations: () => Promise<void>;
 }
 
-export default function RecipeMetadata({ recipe }: RecipeMetadataProps) {
+export default function RecipeMetadata({
+  recipe,
+  associationStatus,
+  isLoading: externalIsLoading,
+  onGenerateAssociations,
+}: RecipeMetadataProps) {
+  const [internalIsLoading, setInternalIsLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const isLoading = internalIsLoading || externalIsLoading;
+  const { toast } = useToast();
+
+  const handleGenerateClick = async () => {
+    try {
+      setInternalIsLoading(true);
+      await onGenerateAssociations();
+
+      toast({
+        title: "Associations Generated",
+        description:
+          "Successfully analyzed recipe and generated ingredient associations.",
+        duration: 3000,
+      });
+    } catch (error) {
+      toast({
+        title: "Generation Failed",
+        description:
+          "There was an error generating ingredient associations. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      });
+      console.error("[RecipeMetadata] Error generating associations:", error);
+    } finally {
+      setInternalIsLoading(false);
+    }
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-      <div className="flex flex-wrap gap-6 text-gray-600">
-        {recipe.totalTime && (
-          <div className="flex items-center gap-2">
-            <Clock className="w-5 h-5" />
-            <span>{recipe.totalTime}</span>
+    <div className="flex flex-col gap-4 p-4 bg-white rounded-lg shadow">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">{recipe.name}</h1>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <Settings2 className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Recipe Settings</DialogTitle>
+              <DialogDescription>
+                Configure settings and actions for {recipe.name}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6 py-4">
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Ingredient Associations</h3>
+                <p className="text-sm text-muted-foreground">
+                  {associationStatus === "valid"
+                    ? "Ingredient associations are up to date"
+                    : associationStatus === "outdated"
+                    ? "Ingredient associations need to be updated"
+                    : "No ingredient associations generated yet"}
+                </p>
+                <Button
+                  onClick={handleGenerateClick}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  {isLoading ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      {associationStatus === "valid"
+                        ? "Clear & Regenerate"
+                        : "Generate Associations"}
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Add more settings sections here */}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-4 text-sm text-gray-600">
+          <div>
+            <span className="font-semibold">Prep Time:</span>{" "}
+            {recipe.prepTime || "N/A"}
           </div>
-        )}
-        {recipe.recipeServings && (
-          <div className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            <span>{recipe.recipeServings} servings</span>
+          <div>
+            <span className="font-semibold">Cook Time:</span>{" "}
+            {recipe.cookTime || "N/A"}
           </div>
-        )}
-        {recipe.recipeCategory && recipe.recipeCategory.length > 0 && (
-          <div className="flex items-center gap-2">
-            <ChefHat className="w-5 h-5" />
-            <span>{recipe.recipeCategory.join(", ")}</span>
+          <div>
+            <span className="font-semibold">Total Time:</span>{" "}
+            {recipe.totalTime || "N/A"}
           </div>
-        )}
-        {recipe.tags && recipe.tags.length > 0 && (
-          <div className="flex items-center gap-2">
-            <UtensilsCrossed className="w-5 h-5" />
-            <span>{recipe.tags.join(", ")}</span>
-          </div>
+        </div>
+        {recipe.description && (
+          <p className="text-sm text-gray-600">{recipe.description}</p>
         )}
       </div>
-      {recipe.description && (
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <p className="text-gray-600">{recipe.description}</p>
-        </div>
-      )}
     </div>
   );
 }

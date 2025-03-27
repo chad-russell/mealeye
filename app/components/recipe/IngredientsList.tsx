@@ -2,7 +2,9 @@
 
 import { components } from "@/lib/types/openapi-generated";
 
-type RecipeIngredient = components["schemas"]["RecipeIngredient-Output"] & {
+type ApiIngredient = components["schemas"]["RecipeIngredient-Output"];
+
+type RecipeIngredient = ApiIngredient & {
   referenceId: string;
 };
 
@@ -12,6 +14,9 @@ interface IngredientsListProps {
   highlightedIngredientIds: Set<string>;
   onIngredientHover: (ingredientId: string | undefined) => void;
   usedIngredients: Set<string>;
+  associationStatus: "valid" | "outdated" | "none";
+  isLoading: boolean;
+  handleGenerateAssociations: () => void;
 }
 
 export default function IngredientsList({
@@ -20,6 +25,9 @@ export default function IngredientsList({
   highlightedIngredientIds,
   onIngredientHover,
   usedIngredients = new Set<string>(),
+  associationStatus,
+  isLoading,
+  handleGenerateAssociations,
 }: IngredientsListProps) {
   if (!ingredients || !usedIngredients) {
     return null;
@@ -28,7 +36,9 @@ export default function IngredientsList({
   return (
     <div className="sticky top-8 h-[calc(100vh-4rem)] overflow-hidden bg-white rounded-lg shadow-sm">
       <div className="p-6 border-b border-gray-100">
-        <h2 className="text-xl font-semibold text-gray-800">Ingredients</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-800">Ingredients</h2>
+        </div>
       </div>
       <div className="h-[calc(100%-4rem)] overflow-y-auto">
         <div className="p-6">

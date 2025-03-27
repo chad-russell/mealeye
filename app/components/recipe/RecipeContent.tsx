@@ -17,6 +17,7 @@ import { AlertCircle, RefreshCw } from "lucide-react";
 
 type RecipeStep = components["schemas"]["RecipeStep"];
 type ApiIngredient = components["schemas"]["RecipeIngredient-Output"];
+
 type RecipeIngredient = ApiIngredient & {
   referenceId: string;
 };
@@ -25,12 +26,16 @@ interface RecipeContentProps {
   recipeId: string;
   instructions: RecipeStep[];
   ingredients: ApiIngredient[];
+  associationStatus?: "valid" | "outdated" | "none";
+  setAssociationStatus?: (status: "valid" | "outdated" | "none") => void;
 }
 
 export default function RecipeContent({
   recipeId,
   instructions = [],
   ingredients: rawIngredients = [],
+  associationStatus: externalAssociationStatus,
+  setAssociationStatus: setExternalAssociationStatus,
 }: RecipeContentProps) {
   // Process ingredients to ensure they all have referenceIds
   const ingredients = useMemo(
@@ -38,7 +43,7 @@ export default function RecipeContent({
       rawIngredients.map((ing, index) => ({
         ...ing,
         referenceId: ing.referenceId || `ingredient-${index}`,
-      })),
+      })) as RecipeIngredient[],
     [rawIngredients]
   );
 
@@ -56,14 +61,40 @@ export default function RecipeContent({
   );
   const [associations, setAssociations] = useState<IngredientAssociation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [associationStatus, setAssociationStatus] = useState<
+  const [internalAssociationStatus, setInternalAssociationStatus] = useState<
     "valid" | "outdated" | "none"
   >("none");
+
+  // Use external or internal state based on what's provided
+  const associationStatus =
+    externalAssociationStatus || internalAssociationStatus;
+  const setAssociationStatus =
+    setExternalAssociationStatus || setInternalAssociationStatus;
 
   // Create the ingredient-step mapping when associations change
   const mapping = useMemo(() => {
     return createIngredientStepMapping(ingredients, associations);
   }, [ingredients, associations]);
+
+  // Load cached associations when the component mounts
+  useEffect(() => {
+    const loadAssociations = async () => {
+      try {
+        const result = await findIngredientAssociations(
+          recipeId,
+          ingredients,
+          instructions
+        );
+        setAssociations(result.associations);
+        setAssociationStatus(result.status);
+      } catch (error) {
+        console.error("[RecipeContent] Error loading associations:", error);
+        setAssociationStatus("none");
+      }
+    };
+
+    loadAssociations();
+  }, [recipeId, ingredients, instructions, setAssociationStatus]);
 
   // Update used ingredients when instructions are completed
   useEffect(() => {
@@ -139,30 +170,6 @@ export default function RecipeContent({
 
   return (
     <div className="space-y-6">
-      {associationStatus === "none" && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>No Ingredient Associations</AlertTitle>
-          <AlertDescription className="flex items-center justify-between">
-            <span>
-              This recipe doesn't have any ingredient associations yet.
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleGenerateAssociations}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                "Generate Associations"
-              )}
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-
       {associationStatus === "outdated" && (
         <Alert variant="warning">
           <AlertCircle className="h-4 w-4" />
@@ -196,7 +203,10 @@ export default function RecipeContent({
           onIngredientHover={(id) =>
             handleIngredientHover(id ? [id] : undefined)
           }
+          associationStatus={associationStatus}
           usedIngredients={usedIngredients}
+          isLoading={isLoading}
+          handleGenerateAssociations={handleGenerateAssociations}
         />
         <InstructionsSection
           instructions={instructions}
@@ -206,7 +216,6 @@ export default function RecipeContent({
           highlightedIngredientIds={highlightedIngredientIds}
           highlightedStepNumbers={highlightedStepNumbers}
           associations={associations}
-          isLoading={isLoading}
         />
       </div>
     </div>
