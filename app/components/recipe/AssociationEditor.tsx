@@ -128,12 +128,28 @@ export default function AssociationEditor({
     }
 
     // Add the highlighted text (preserve original casing)
+    // Split the highlighted text into words and wrap each one
+    const highlightedText = text.slice(startIndex, endIndex);
+    const words = highlightedText.split(/(\s+)/);
+
     parts.push(
-      <span
-        key="highlight"
-        className="bg-yellow-100 dark:bg-yellow-900 rounded px-1"
-      >
-        {text.slice(startIndex, endIndex)}
+      <span key="highlight" className="inline">
+        {words.map((word, i) => {
+          // If it's a whitespace token, render it as-is
+          if (word.trim() === "") {
+            return <span key={i}>{word}</span>;
+          }
+          // Otherwise wrap it in our highlight styling
+          return (
+            <span key={i} className="relative inline-block">
+              <span className="relative z-10">{word}</span>
+              <span
+                className="absolute inset-0 -mx-0.5 bg-yellow-100 dark:bg-yellow-900 rounded"
+                style={{ zIndex: 1 }}
+              />
+            </span>
+          );
+        })}
       </span>
     );
 
@@ -157,7 +173,7 @@ export default function AssociationEditor({
                 <div
                   key={ingredient.referenceId}
                   className={cn(
-                    "p-2 rounded cursor-pointer transition-colors",
+                    "p-2 rounded cursor-pointer transition-colors border border-border",
                     selectedIngredient?.referenceId === ingredient.referenceId
                       ? "bg-primary text-primary-foreground"
                       : isIngredientHighlighted(ingredient)
@@ -183,7 +199,7 @@ export default function AssociationEditor({
                   key={index}
                   className={cn(
                     "p-2 rounded transition-colors",
-                    "hover:bg-accent"
+                    "hover:bg-accent border border-border"
                   )}
                   onMouseUp={(e) => handleStepSelect(e as any, index)}
                 >
@@ -224,8 +240,8 @@ export default function AssociationEditor({
               <div
                 key={index}
                 className={cn(
-                  "flex items-center justify-between py-2 first:pt-0 last:pb-0",
-                  "hover:bg-accent/50 rounded transition-colors"
+                  "flex items-center justify-between py-2 px-2 first:pt-0 last:pb-0 border border-border rounded mb-2",
+                  "hover:bg-accent/50 transition-colors"
                 )}
                 onMouseEnter={() => setHoveredAssociation(association)}
                 onMouseLeave={() => setHoveredAssociation(null)}

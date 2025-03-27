@@ -34,6 +34,12 @@ export default function RecipeSettingsDialog({
         <div>
           <h3 className="text-lg font-semibold">Ingredient Associations</h3>
           <p className="text-sm text-muted-foreground">
+            Associations help track which ingredients are used in each step of
+            the recipe. This enables interactive features like highlighting
+            connected ingredients and steps, and marking ingredients as used
+            when their steps are completed.
+          </p>
+          <p className="text-sm text-muted-foreground mt-2">
             {associationStatus === "valid"
               ? "Ingredient associations are up to date"
               : associationStatus === "outdated"
