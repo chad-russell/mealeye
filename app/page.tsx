@@ -1,20 +1,27 @@
-import RecipesList from "./components/RecipesList";
-import { client } from "@/lib/server/api";
+import { CommandSearch } from "./components/CommandSearch";
+import RecipeGrid from "./components/RecipeGrid";
+import { getRecipes } from "./lib/server/recipe-actions";
 
 export default async function Home() {
-  const recipes = await client.GET("/api/recipes", {
-    query: {
-      page: 1,
-      per_page: 20,
-    },
-  });
+  const recipes = await getRecipes();
 
   return (
-    <div className="min-h-screen bg-[#fafafa] p-8">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8 text-gray-700">Recipes</h1>
-        <RecipesList recipes={recipes.data?.items || []} />
+    <main className="min-h-screen bg-gray-50 px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-8 space-y-4">
+          <h1 className="text-center text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
+            Recipes
+          </h1>
+          <p className="text-center text-lg text-gray-600">
+            Discover and organize your favorite recipes
+          </p>
+          <div className="flex justify-center">
+            <CommandSearch />
+          </div>
+        </div>
+
+        <RecipeGrid recipes={recipes} />
       </div>
-    </div>
+    </main>
   );
 }

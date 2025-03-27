@@ -59,9 +59,9 @@ export default function RecipeMetadata({
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Recipe Settings</DialogTitle>
+              <DialogTitle className="text-xl">Recipe Settings</DialogTitle>
               <DialogDescription>
-                Configure settings and actions for {recipe.name}
+                Configure settings and actions for <em>{recipe.name}</em>
               </DialogDescription>
             </DialogHeader>
 

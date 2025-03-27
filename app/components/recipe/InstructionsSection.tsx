@@ -251,7 +251,7 @@ const InstructionCard = ({
             />
           </div>
           <h3
-            className={`font-medium ${
+            className={`font-medium select-none ${
               isCompleted ? "text-green-700 line-through" : "text-gray-800"
             }`}
           >
