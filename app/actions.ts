@@ -1,15 +1,12 @@
 "use server";
 
 import { client } from "@/lib/server/api";
-import { components } from "@/lib/types/openapi-generated";
+import { RecipeStep, ApiIngredient } from "@/lib/types/recipe";
 import {
   findIngredientAssociations as findAssociations,
   clearIngredientAssociations as clearAssociations,
   checkIngredientAssociations as checkAssociations,
 } from "@/lib/server/actions";
-
-type RecipeStep = components["schemas"]["RecipeStep"];
-type ApiIngredient = components["schemas"]["RecipeIngredient-Output"];
 
 export async function getRecipe(slug: string) {
   const response = await client.GET("/api/recipes/{slug}", {

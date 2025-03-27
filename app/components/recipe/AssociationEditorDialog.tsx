@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { components } from "@/lib/types/openapi-generated";
+import { RecipeStep, ApiIngredient } from "@/lib/types/recipe";
 import { type IngredientAssociation } from "@/lib/utils/ingredient-matching";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,9 +12,6 @@ import {
 } from "@/components/ui/dialog";
 import { Settings2 } from "lucide-react";
 import AssociationEditor from "./AssociationEditor";
-
-type RecipeStep = components["schemas"]["RecipeStep"];
-type ApiIngredient = components["schemas"]["RecipeIngredient-Output"];
 
 interface AssociationEditorDialogProps {
   ingredients: ApiIngredient[];

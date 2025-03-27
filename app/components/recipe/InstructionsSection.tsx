@@ -2,18 +2,15 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { ChevronDown, ChevronUp, CheckCircle2 } from "lucide-react";
-import { components } from "@/lib/types/openapi-generated";
+import {
+  RecipeStep,
+  ApiIngredient,
+  ExtendedRecipeIngredient,
+} from "@/lib/types/recipe";
 import {
   findIngredientsInText,
   type IngredientAssociation,
 } from "@/lib/utils/ingredient-matching";
-
-type RecipeStep = components["schemas"]["RecipeStep"];
-type ApiIngredient = components["schemas"]["RecipeIngredient-Output"];
-
-type RecipeIngredient = ApiIngredient & {
-  referenceId: string;
-};
 
 type TextToken = { type: "text"; text: string };
 type IngredientToken = { type: "ingredient"; text: string; ingredient: string };
@@ -99,7 +96,7 @@ const HighlightedText = ({ text, highlights }: HighlightedTextProps) => {
 interface InstructionCardProps {
   instruction: RecipeStep;
   index: number;
-  ingredients: RecipeIngredient[];
+  ingredients: ExtendedRecipeIngredient[];
   onInstructionComplete: (index: number, completed: boolean) => void;
   highlightedIngredientIds: Set<string>;
   isHighlighted: boolean;
@@ -285,7 +282,7 @@ const InstructionCard = ({
 
 interface InstructionsSectionProps {
   instructions: RecipeStep[];
-  ingredients: RecipeIngredient[];
+  ingredients: ExtendedRecipeIngredient[];
   onInstructionComplete: (completedSteps: boolean[]) => void;
   onIngredientHover: (ids: string[] | undefined, isStepHover?: boolean) => void;
   highlightedIngredientIds: Set<string>;

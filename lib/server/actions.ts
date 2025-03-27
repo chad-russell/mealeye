@@ -1,7 +1,7 @@
 "use server";
 
 import OpenAI from "openai";
-import { components } from "@/lib/types/openapi-generated";
+import { RecipeStep, ApiIngredient } from "@/lib/types/recipe";
 import { IngredientAssociation } from "../utils/ingredient-matching";
 import {
   getAssociations,
@@ -9,9 +9,6 @@ import {
   clearAssociations,
 } from "@/app/lib/server/db";
 import { hashRecipe } from "../utils/recipe-hashing";
-
-type RecipeStep = components["schemas"]["RecipeStep"];
-type ApiIngredient = components["schemas"]["RecipeIngredient-Output"];
 
 // Initialize OpenAI client
 const openai = new OpenAI({

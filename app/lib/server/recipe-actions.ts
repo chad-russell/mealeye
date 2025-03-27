@@ -1,9 +1,7 @@
 "use server";
 
 import { client } from "@/lib/server/api";
-import { components } from "@/lib/types/openapi-generated";
-
-type RecipeSummary = components["schemas"]["RecipeSummary"];
+import { RecipeSummary } from "@/lib/types/recipe";
 
 export async function getRecipes(): Promise<RecipeSummary[]> {
   const response = await client.GET("/api/recipes", {

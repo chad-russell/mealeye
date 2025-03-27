@@ -1,11 +1,5 @@
-import { components } from "@/lib/types/openapi-generated";
+import { RecipeStep, ExtendedRecipeIngredient } from "@/lib/types/recipe";
 import OpenAI from "openai";
-
-type RecipeIngredient = components["schemas"]["RecipeIngredient-Output"] & {
-  referenceId: string;
-};
-
-type RecipeStep = components["schemas"]["RecipeStep"];
 
 interface IngredientAssociation {
   ingredient: string;
@@ -16,7 +10,7 @@ interface IngredientAssociation {
 
 interface LLMProvider {
   findIngredientAssociations(
-    ingredients: RecipeIngredient[],
+    ingredients: ExtendedRecipeIngredient[],
     steps: RecipeStep[]
   ): Promise<IngredientAssociation[]>;
 }
@@ -32,7 +26,7 @@ class OpenAIProvider implements LLMProvider {
   }
 
   async findIngredientAssociations(
-    ingredients: RecipeIngredient[],
+    ingredients: ExtendedRecipeIngredient[],
     steps: RecipeStep[]
   ): Promise<IngredientAssociation[]> {
     try {
@@ -133,7 +127,7 @@ export function createLLMProvider(
 // Helper function to find ingredients in text using LLM associations
 export function findIngredientsInText(
   text: string,
-  ingredients: RecipeIngredient[],
+  ingredients: ExtendedRecipeIngredient[],
   associations: IngredientAssociation[]
 ): string[] {
   const cleanText = text.toLowerCase().trim();

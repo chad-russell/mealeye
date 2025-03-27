@@ -1,8 +1,5 @@
-import { components } from "@/lib/types/openapi-generated";
+import { RecipeIngredient, RecipeStep } from "@/lib/types/recipe";
 import { createHash } from "crypto";
-
-type RecipeIngredient = components["schemas"]["RecipeIngredient-Output"];
-type RecipeStep = components["schemas"]["RecipeStep"];
 
 export function hashRecipe(
   ingredients: RecipeIngredient[],

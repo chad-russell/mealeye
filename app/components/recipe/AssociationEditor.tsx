@@ -1,14 +1,11 @@
 import { useState, useRef, type ReactNode } from "react";
-import { components } from "@/lib/types/openapi-generated";
+import { RecipeStep, ApiIngredient } from "@/lib/types/recipe";
 import { type IngredientAssociation } from "@/lib/utils/ingredient-matching";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-type RecipeStep = components["schemas"]["RecipeStep"];
-type ApiIngredient = components["schemas"]["RecipeIngredient-Output"];
 
 interface AssociationEditorProps {
   ingredients: ApiIngredient[];

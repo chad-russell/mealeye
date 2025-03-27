@@ -1,8 +1,6 @@
 "use client";
 
-import { components } from "@/lib/types/openapi-generated";
-
-type ApiIngredient = components["schemas"]["RecipeIngredient-Output"];
+import { ApiIngredient } from "@/lib/types/recipe";
 
 type RecipeIngredient = ApiIngredient & {
   referenceId: string;

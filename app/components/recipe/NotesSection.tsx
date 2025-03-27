@@ -1,7 +1,5 @@
-import { components } from "@/lib/types/openapi-generated";
+import { RecipeNote } from "@/lib/types/recipe";
 import { StickyNote } from "lucide-react";
-
-type RecipeNote = components["schemas"]["RecipeNote"];
 
 interface NotesSectionProps {
   notes: RecipeNote[];

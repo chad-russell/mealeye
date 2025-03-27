@@ -1,13 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Settings2 } from "lucide-react";
 import { type IngredientAssociation } from "@/lib/utils/ingredient-matching";
-import { components } from "@/lib/types/openapi-generated";
+import { RecipeStep, ApiIngredient } from "@/lib/types/recipe";
 import AssociationEditorDialog from "./AssociationEditorDialog";
 import { cn } from "@/lib/utils";
-
-type RecipeStep = components["schemas"]["RecipeStep"];
-type ApiIngredient =
-  components["schemas"]["Recipe-Output"]["recipeIngredient"][number];
 
 interface RecipeSettingsDialogProps {
   associationStatus: "valid" | "outdated" | "none";

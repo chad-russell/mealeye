@@ -1,9 +1,5 @@
-import { components } from "@/lib/types/openapi-generated";
+import { ExtendedRecipeIngredient } from "@/lib/types/recipe";
 import { IngredientAssociation } from "./ingredient-matching";
-
-type RecipeIngredient = components["schemas"]["RecipeIngredient-Output"] & {
-  referenceId: string;
-};
 
 interface IngredientStepMapping {
   // Map from step number to ingredient IDs used in that step
@@ -13,7 +9,7 @@ interface IngredientStepMapping {
 }
 
 export function createIngredientStepMapping(
-  ingredients: RecipeIngredient[],
+  ingredients: ExtendedRecipeIngredient[],
   associations: IngredientAssociation[]
 ): IngredientStepMapping {
   const mapping: IngredientStepMapping = {

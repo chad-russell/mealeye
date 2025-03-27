@@ -4,10 +4,8 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { Clock, Users } from "lucide-react";
-import { components } from "@/lib/types/openapi-generated";
+import { RecipeSummary } from "@/lib/types/recipe";
 import { recipeImageUrl } from "@/lib/utils/url";
-
-type RecipeSummary = components["schemas"]["RecipeSummary"];
 
 interface RecipeCardProps {
   recipe: RecipeSummary;

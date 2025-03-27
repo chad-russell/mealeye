@@ -17,9 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, RefreshCw } from "lucide-react";
-
-type RecipeStep = components["schemas"]["RecipeStep"];
-type ApiIngredient = components["schemas"]["RecipeIngredient-Output"];
+import { RecipeStep, ApiIngredient } from "@/lib/types/recipe";
 
 type RecipeIngredient = ApiIngredient & {
   referenceId: string;

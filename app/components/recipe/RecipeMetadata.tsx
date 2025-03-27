@@ -10,7 +10,7 @@ import {
   RefreshCw,
   MoreVertical,
 } from "lucide-react";
-import { components } from "@/lib/types/openapi-generated";
+import { Recipe } from "@/lib/types/recipe";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,8 +23,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { type IngredientAssociation } from "@/lib/utils/ingredient-matching";
 import RecipeSettingsDialog from "./RecipeSettingsDialog";
-
-type Recipe = components["schemas"]["Recipe-Output"];
 
 interface RecipeMetadataProps {
   recipe: Recipe;
