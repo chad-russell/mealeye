@@ -2,9 +2,10 @@ import { useState, useRef } from "react";
 import { components } from "@/lib/types/openapi-generated";
 import { type IngredientAssociation } from "@/lib/utils/ingredient-matching";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type RecipeStep = components["schemas"]["RecipeStep"];
 type ApiIngredient = components["schemas"]["RecipeIngredient-Output"];
@@ -37,6 +38,10 @@ export default function AssociationEditor({
   // State for all associations
   const [associations, setAssociations] =
     useState<IngredientAssociation[]>(initialAssociations);
+
+  // Add hover state
+  const [hoveredAssociation, setHoveredAssociation] =
+    useState<IngredientAssociation | null>(null);
 
   // Handle text selection in steps
   const handleStepSelect = (e: MouseEvent, stepIndex: number) => {
@@ -88,6 +93,40 @@ export default function AssociationEditor({
     onSave(associations);
   };
 
+  // Helper to check if an ingredient matches the hovered association
+  const isIngredientHighlighted = (ingredient: ApiIngredient) => {
+    if (!hoveredAssociation) return false;
+    return (
+      (ingredient.note || ingredient.display) === hoveredAssociation.ingredient
+    );
+  };
+
+  // Helper to check if an instruction step matches the hovered association
+  const isInstructionHighlighted = (index: number) => {
+    if (!hoveredAssociation) return false;
+    return index + 1 === hoveredAssociation.step;
+  };
+
+  // Helper to render instruction text with highlighted portions
+  const renderInstructionText = (text: string, index: number) => {
+    if (!hoveredAssociation || hoveredAssociation.step !== index + 1) {
+      return text;
+    }
+
+    const matchText = hoveredAssociation.text;
+    const parts = text.split(new RegExp(`(${matchText})`, "i"));
+
+    return parts.map((part, i) =>
+      part.toLowerCase() === matchText.toLowerCase() ? (
+        <span key={i} className="bg-yellow-100 dark:bg-yellow-900 rounded px-1">
+          {part}
+        </span>
+      ) : (
+        part
+      )
+    );
+  };
+
   return (
     <div className="flex flex-col h-[70vh] max-h-[800px]">
       <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-h-0">
@@ -99,11 +138,14 @@ export default function AssociationEditor({
               {ingredients.map((ingredient) => (
                 <div
                   key={ingredient.referenceId}
-                  className={`p-2 rounded cursor-pointer transition-colors ${
+                  className={cn(
+                    "p-2 rounded cursor-pointer transition-colors",
                     selectedIngredient?.referenceId === ingredient.referenceId
                       ? "bg-primary text-primary-foreground"
+                      : isIngredientHighlighted(ingredient)
+                      ? "bg-yellow-100 dark:bg-yellow-900"
                       : "hover:bg-accent"
-                  }`}
+                  )}
                   onClick={() => setSelectedIngredient(ingredient)}
                 >
                   {ingredient.note || ingredient.display}
@@ -121,11 +163,14 @@ export default function AssociationEditor({
               {instructions.map((instruction, index) => (
                 <div
                   key={index}
-                  className="p-2 rounded hover:bg-accent"
+                  className={cn(
+                    "p-2 rounded transition-colors",
+                    "hover:bg-accent"
+                  )}
                   onMouseUp={(e) => handleStepSelect(e as any, index)}
                 >
                   <div className="font-medium mb-1">Step {index + 1}</div>
-                  <div>{instruction.text}</div>
+                  <div>{renderInstructionText(instruction.text, index)}</div>
                 </div>
               ))}
             </div>
@@ -153,24 +198,25 @@ export default function AssociationEditor({
       )}
 
       {/* Existing Associations */}
-      <div className="border-t mt-4 pt-4">
-        <h3 className="font-medium mb-4">Current Associations</h3>
-        <ScrollArea className="max-h-[200px]">
-          <div className="space-y-2 pr-4">
-            {associations.map((assoc, index) => (
+      <div className="mt-4">
+        <h3 className="text-lg font-semibold mb-2">Current Associations</h3>
+        <ScrollArea className="h-[200px] rounded-md border">
+          <div className="p-4">
+            {associations.map((association, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between p-2 border rounded"
+                className={cn(
+                  "flex items-center justify-between py-2 first:pt-0 last:pb-0",
+                  "hover:bg-accent/50 rounded transition-colors"
+                )}
+                onMouseEnter={() => setHoveredAssociation(association)}
+                onMouseLeave={() => setHoveredAssociation(null)}
               >
-                <div>
-                  <Badge variant="outline" className="mr-2">
-                    {assoc.ingredient}
-                  </Badge>
-                  <span className="mr-2">→</span>
-                  <Badge variant="outline" className="mr-2">
-                    Step {assoc.step}
-                  </Badge>
-                  <span>"{assoc.text}"</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{association.ingredient}</span>
+                  <span className="text-gray-500">→</span>
+                  <span>Step {association.step}</span>
+                  <span className="text-gray-500">"{association.text}"</span>
                 </div>
                 <Button
                   variant="ghost"
@@ -182,6 +228,7 @@ export default function AssociationEditor({
               </div>
             ))}
           </div>
+          <ScrollBar orientation="vertical" />
         </ScrollArea>
       </div>
 
