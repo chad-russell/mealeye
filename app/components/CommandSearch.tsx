@@ -2,12 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { Command } from "cmdk";
-import { Search } from "lucide-react";
+import { Search, Timer, Users } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { searchRecipes } from "@/app/lib/server/recipe-actions";
+import { type RecipeSummary } from "@/lib/types/api";
+import { useRouter } from "next/navigation";
 
 export function CommandSearch() {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   // Toggle the menu when ⌘K is pressed
   useEffect(() => {
@@ -21,6 +28,35 @@ export function CommandSearch() {
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
   }, []);
+
+  // Search for recipes when query changes
+  useEffect(() => {
+    const searchForRecipes = async () => {
+      if (!query.trim()) {
+        setRecipes([]);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const results = await searchRecipes(query);
+        setRecipes(results);
+      } catch (error) {
+        console.error("Failed to search recipes:", error);
+        setRecipes([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const timeoutId = setTimeout(searchForRecipes, 300);
+    return () => clearTimeout(timeoutId);
+  }, [query]);
+
+  const handleSelect = (recipeSlug: string) => {
+    router.push(`/recipes/${recipeSlug}`);
+    setOpen(false);
+  };
 
   return (
     <>
@@ -45,13 +81,50 @@ export function CommandSearch() {
             >
               <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
               <Command.Input
+                value={query}
+                onValueChange={setQuery}
                 placeholder="Search recipes..."
                 className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
             <Command.List>
-              <Command.Empty>No results found.</Command.Empty>
-              {/* We'll add recipe results here later */}
+              <Command.Empty>No recipes found.</Command.Empty>
+              {recipes.map((recipe) => (
+                <Command.Item
+                  key={recipe.id}
+                  value={recipe.slug}
+                  onSelect={handleSelect}
+                  className="flex flex-col gap-1 px-4 py-3 cursor-pointer hover:bg-accent hover:text-accent-foreground [&_svg]:hover:text-accent-foreground [&_span]:hover:text-accent-foreground transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-lg font-medium flex-1 mr-8">
+                      {recipe.name}
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground shrink-0">
+                      {recipe.totalTime && (
+                        <div className="flex items-center gap-2">
+                          <Timer className="h-4 w-4" />
+                          <span>{recipe.totalTime}</span>
+                        </div>
+                      )}
+                      {recipe.recipeServings && (
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          <span>{recipe.recipeServings}</span>
+                          <span className="text-muted-foreground/50">
+                            servings
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {recipe.description && (
+                    <div className="text-sm text-muted-foreground/75 line-clamp-1">
+                      {recipe.description}
+                    </div>
+                  )}
+                </Command.Item>
+              ))}
             </Command.List>
           </Command>
         </DialogContent>

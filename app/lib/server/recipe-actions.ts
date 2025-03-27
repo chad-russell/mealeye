@@ -23,3 +23,21 @@ export async function getRecipes(): Promise<RecipeSummary[]> {
 
   return response.data.items;
 }
+
+export async function searchRecipes(query: string): Promise<RecipeSummary[]> {
+  const response = await client.GET("/api/recipes", {
+    query: {
+      page: 1,
+      per_page: 20,
+      search: query,
+      order_by: "name",
+      order_direction: "asc",
+    },
+  });
+
+  if (!response.data) {
+    throw new Error("Failed to fetch recipes");
+  }
+
+  return response.data.items;
+}
