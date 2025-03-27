@@ -6,18 +6,25 @@ import HeroImage from "@/app/components/recipe/HeroImage";
 import RecipeMetadata from "@/app/components/recipe/RecipeMetadata";
 import RecipeContent from "@/app/components/recipe/RecipeContent";
 import NotesSection from "@/app/components/recipe/NotesSection";
-import { findIngredientAssociations } from "@/app/actions";
+import {
+  findIngredientAssociations,
+  clearIngredientAssociations,
+} from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 
 interface RecipePageContentProps {
   recipe: components["schemas"]["Recipe-Output"];
+  initialAssociationStatus?: "valid" | "outdated" | "none";
 }
 
-export default function RecipePageContent({ recipe }: RecipePageContentProps) {
+export default function RecipePageContent({
+  recipe,
+  initialAssociationStatus = "none",
+}: RecipePageContentProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [associationStatus, setAssociationStatus] = useState<
     "valid" | "outdated" | "none"
-  >("none");
+  >(initialAssociationStatus);
   const { toast } = useToast();
 
   const handleGenerateAssociations = async () => {
@@ -48,6 +55,29 @@ export default function RecipePageContent({ recipe }: RecipePageContentProps) {
     }
   };
 
+  const handleClearAssociations = async () => {
+    if (!recipe.id) return;
+
+    setIsLoading(true);
+    try {
+      await clearIngredientAssociations(recipe.id);
+      setAssociationStatus("none");
+      toast({
+        title: "Success",
+        description: "Successfully cleared ingredient associations",
+      });
+    } catch (error) {
+      console.error("Error clearing associations:", error);
+      toast({
+        title: "Error",
+        description: "Failed to clear ingredient associations",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#fafafa]">
       {/* Hero Section */}
@@ -66,6 +96,7 @@ export default function RecipePageContent({ recipe }: RecipePageContentProps) {
           associationStatus={associationStatus}
           isLoading={isLoading}
           onGenerateAssociations={handleGenerateAssociations}
+          onClearAssociations={handleClearAssociations}
         />
 
         {/* Recipe Content */}

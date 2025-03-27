@@ -29,6 +29,7 @@ interface RecipeMetadataProps {
   associationStatus: "valid" | "outdated" | "none";
   isLoading: boolean;
   onGenerateAssociations: () => Promise<void>;
+  onClearAssociations: () => Promise<void>;
 }
 
 export default function RecipeMetadata({
@@ -36,6 +37,7 @@ export default function RecipeMetadata({
   associationStatus,
   isLoading: externalIsLoading,
   onGenerateAssociations,
+  onClearAssociations,
 }: RecipeMetadataProps) {
   const [internalIsLoading, setInternalIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -62,6 +64,30 @@ export default function RecipeMetadata({
         duration: 5000,
       });
       console.error("[RecipeMetadata] Error generating associations:", error);
+    } finally {
+      setInternalIsLoading(false);
+    }
+  };
+
+  const handleClearClick = async () => {
+    try {
+      setInternalIsLoading(true);
+      await onClearAssociations();
+
+      toast({
+        title: "Associations Cleared",
+        description: "Successfully cleared ingredient associations.",
+        duration: 3000,
+      });
+    } catch (error) {
+      toast({
+        title: "Clear Failed",
+        description:
+          "There was an error clearing ingredient associations. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      });
+      console.error("[RecipeMetadata] Error clearing associations:", error);
     } finally {
       setInternalIsLoading(false);
     }
@@ -95,25 +121,37 @@ export default function RecipeMetadata({
                     ? "Ingredient associations need to be updated"
                     : "No ingredient associations generated yet"}
                 </p>
-                <Button
-                  onClick={handleGenerateClick}
-                  disabled={isLoading}
-                  className="w-full"
-                >
-                  {isLoading ? (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      {associationStatus === "valid"
-                        ? "Clear & Regenerate"
-                        : "Generate Associations"}
-                    </>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleGenerateClick}
+                    disabled={isLoading}
+                    className="flex-1"
+                  >
+                    {isLoading ? (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        {associationStatus === "valid"
+                          ? "Clear & Regenerate"
+                          : "Generate Associations"}
+                      </>
+                    )}
+                  </Button>
+                  {associationStatus === "valid" && (
+                    <Button
+                      onClick={handleClearClick}
+                      disabled={isLoading}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Clear Only
+                    </Button>
                   )}
-                </Button>
+                </div>
               </div>
 
               {/* Add more settings sections here */}

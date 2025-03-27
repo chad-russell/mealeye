@@ -3,7 +3,7 @@
 import OpenAI from "openai";
 import { components } from "@/lib/types/openapi-generated";
 import { IngredientAssociation } from "../utils/ingredient-matching";
-import { getAssociations, saveAssociations } from "../db";
+import { getAssociations, saveAssociations, clearAssociations } from "../db";
 import { hashRecipe } from "../utils/recipe-hashing";
 
 type RecipeStep = components["schemas"]["RecipeStep"];
@@ -154,5 +154,58 @@ export async function findIngredientAssociations(
   } catch (error) {
     console.error("Error in findIngredientAssociations:", error);
     return { associations: [], status: "none" };
+  }
+}
+
+export async function checkIngredientAssociations(
+  recipeId: string,
+  ingredients: ApiIngredient[],
+  instructions: RecipeStep[]
+): Promise<{
+  associations: IngredientAssociation[];
+  status: "valid" | "outdated" | "none";
+}> {
+  try {
+    // Calculate recipe hash
+    const recipeHash = hashRecipe(ingredients, instructions);
+
+    // Check if we have cached associations
+    const cachedResult = await getAssociations(recipeId, recipeHash);
+
+    if (!cachedResult) {
+      return { associations: [], status: "none" };
+    }
+
+    if (cachedResult.status === "valid") {
+      // Convert the database associations to the expected format
+      const formattedAssociations: IngredientAssociation[] =
+        cachedResult.associations.map((assoc) => ({
+          ingredient: assoc.ingredient,
+          amount: assoc.amount || undefined,
+          step: assoc.step,
+          text: assoc.text,
+        }));
+
+      return {
+        associations: formattedAssociations,
+        status: formattedAssociations.length > 0 ? "valid" : "none",
+      };
+    }
+
+    return { associations: [], status: "outdated" };
+  } catch (error) {
+    console.error("Error in checkIngredientAssociations:", error);
+    return { associations: [], status: "none" };
+  }
+}
+
+export async function clearIngredientAssociations(
+  recipeId: string
+): Promise<void> {
+  try {
+    await clearAssociations(recipeId);
+  } catch (error) {
+    console.error("Error in clearIngredientAssociations:", error);
+    throw error;
   }
 }

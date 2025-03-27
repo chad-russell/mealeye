@@ -97,3 +97,32 @@ export async function saveAssociations(
     }
   });
 }
+
+export async function clearAssociations(recipeId: string) {
+  const db = await getDb();
+  await db.transaction(async (tx) => {
+    // First, get the recipe association ID
+    const recipeAssociation = await tx
+      .select()
+      .from(schema.recipeAssociationsConfig.table)
+      .where(eq(schema.recipeAssociationsConfig.columns.recipeId, recipeId))
+      .limit(1);
+
+    if (recipeAssociation.length > 0) {
+      // Delete ingredient associations first
+      await tx
+        .delete(schema.ingredientAssociationsConfig.table)
+        .where(
+          eq(
+            schema.ingredientAssociationsConfig.columns.recipeAssociationId,
+            recipeAssociation[0].id
+          )
+        );
+
+      // Then delete the recipe association
+      await tx
+        .delete(schema.recipeAssociationsConfig.table)
+        .where(eq(schema.recipeAssociationsConfig.columns.recipeId, recipeId));
+    }
+  });
+}

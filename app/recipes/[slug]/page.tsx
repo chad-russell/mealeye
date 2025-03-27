@@ -1,5 +1,5 @@
 import RecipePageContent from "@/app/recipes/[slug]/RecipePageContent";
-import { getRecipe, findIngredientAssociations } from "@/app/actions";
+import { getRecipe, checkIngredientAssociations } from "@/app/actions";
 
 export default async function RecipePage({
   params,
@@ -26,8 +26,8 @@ export default async function RecipePage({
     );
   }
 
-  // Get initial associations status
-  const initialAssociations = await findIngredientAssociations(
+  // Check initial associations status without generating
+  const initialAssociations = await checkIngredientAssociations(
     recipe.id || "",
     recipe.recipeIngredient || [],
     recipe.recipeInstructions || []

@@ -5,7 +5,10 @@ import { components } from "@/lib/types/openapi-generated";
 import InstructionsSection from "./InstructionsSection";
 import IngredientsList from "./IngredientsList";
 import { type IngredientAssociation } from "@/lib/utils/ingredient-matching";
-import { findIngredientAssociations } from "@/lib/server/actions";
+import {
+  findIngredientAssociations,
+  checkIngredientAssociations,
+} from "@/lib/server/actions";
 import {
   createIngredientStepMapping,
   getIngredientsForStep,
@@ -80,7 +83,7 @@ export default function RecipeContent({
   useEffect(() => {
     const loadAssociations = async () => {
       try {
-        const result = await findIngredientAssociations(
+        const result = await checkIngredientAssociations(
           recipeId,
           ingredients,
           instructions
