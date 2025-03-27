@@ -3,6 +3,7 @@ import { RefreshCw, Settings2 } from "lucide-react";
 import { type IngredientAssociation } from "@/lib/utils/ingredient-matching";
 import { components } from "@/lib/types/openapi-generated";
 import AssociationEditorDialog from "./AssociationEditorDialog";
+import { cn } from "@/lib/utils";
 
 type RecipeStep = components["schemas"]["RecipeStep"];
 type ApiIngredient =
@@ -16,6 +17,7 @@ interface RecipeSettingsDialogProps {
   instructions: RecipeStep[];
   associations: IngredientAssociation[];
   onSaveAssociations: (associations: IngredientAssociation[]) => Promise<void>;
+  isLoading?: boolean;
 }
 
 export default function RecipeSettingsDialog({
@@ -26,6 +28,7 @@ export default function RecipeSettingsDialog({
   instructions,
   associations,
   onSaveAssociations,
+  isLoading = false,
 }: RecipeSettingsDialogProps) {
   return (
     <div className="space-y-6">
@@ -53,8 +56,11 @@ export default function RecipeSettingsDialog({
             variant="default"
             className="w-full"
             onClick={onClearAndRegenerate}
+            disabled={isLoading}
           >
-            <RefreshCw className="mr-2 h-4 w-4" />
+            <RefreshCw
+              className={cn("mr-2 h-4 w-4", isLoading && "animate-spin")}
+            />
             Clear & Regenerate
           </Button>
           {associationStatus === "valid" && (

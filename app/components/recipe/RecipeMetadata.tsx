@@ -73,6 +73,7 @@ export default function RecipeMetadata({
               instructions={recipe.recipeInstructions || []}
               associations={currentAssociations}
               onSaveAssociations={onSaveAssociations}
+              isLoading={externalIsLoading}
             />
           </DialogContent>
         </Dialog>
