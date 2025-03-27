@@ -21,8 +21,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import AssociationEditorDialog from "./AssociationEditorDialog";
 import { type IngredientAssociation } from "@/lib/utils/ingredient-matching";
+import RecipeSettingsDialog from "./RecipeSettingsDialog";
 
 type Recipe = components["schemas"]["Recipe-Output"];
 
@@ -45,59 +45,7 @@ export default function RecipeMetadata({
   onSaveAssociations,
   currentAssociations,
 }: RecipeMetadataProps) {
-  const [internalIsLoading, setInternalIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const isLoading = internalIsLoading || externalIsLoading;
-  const { toast } = useToast();
-
-  const handleGenerateClick = async () => {
-    try {
-      setInternalIsLoading(true);
-      await onGenerateAssociations();
-
-      toast({
-        title: "Associations Generated",
-        description:
-          "Successfully analyzed recipe and generated ingredient associations.",
-        duration: 3000,
-      });
-    } catch (error) {
-      toast({
-        title: "Generation Failed",
-        description:
-          "There was an error generating ingredient associations. Please try again.",
-        variant: "destructive",
-        duration: 5000,
-      });
-      console.error("[RecipeMetadata] Error generating associations:", error);
-    } finally {
-      setInternalIsLoading(false);
-    }
-  };
-
-  const handleClearClick = async () => {
-    try {
-      setInternalIsLoading(true);
-      await onClearAssociations();
-
-      toast({
-        title: "Associations Cleared",
-        description: "Successfully cleared ingredient associations.",
-        duration: 3000,
-      });
-    } catch (error) {
-      toast({
-        title: "Clear Failed",
-        description:
-          "There was an error clearing ingredient associations. Please try again.",
-        variant: "destructive",
-        duration: 5000,
-      });
-      console.error("[RecipeMetadata] Error clearing associations:", error);
-    } finally {
-      setInternalIsLoading(false);
-    }
-  };
 
   return (
     <div className="flex flex-col gap-4 p-4 bg-white rounded-lg shadow">
@@ -117,59 +65,15 @@ export default function RecipeMetadata({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-6 py-4">
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">Ingredient Associations</h3>
-                <p className="text-sm text-muted-foreground">
-                  {associationStatus === "valid"
-                    ? "Ingredient associations are up to date"
-                    : associationStatus === "outdated"
-                    ? "Ingredient associations need to be updated"
-                    : "No ingredient associations generated yet"}
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleGenerateClick}
-                    disabled={isLoading}
-                    className="flex-1"
-                  >
-                    {isLoading ? (
-                      <>
-                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        {associationStatus === "valid"
-                          ? "Clear & Regenerate"
-                          : "Generate Associations"}
-                      </>
-                    )}
-                  </Button>
-                  {associationStatus === "valid" && (
-                    <Button
-                      onClick={handleClearClick}
-                      disabled={isLoading}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      Clear Only
-                    </Button>
-                  )}
-                </div>
-                {associationStatus === "valid" && (
-                  <AssociationEditorDialog
-                    ingredients={recipe.recipeIngredient || []}
-                    instructions={recipe.recipeInstructions || []}
-                    associations={currentAssociations}
-                    onSave={onSaveAssociations}
-                  />
-                )}
-              </div>
-
-              {/* Add more settings sections here */}
-            </div>
+            <RecipeSettingsDialog
+              associationStatus={associationStatus}
+              onClearAndRegenerate={onGenerateAssociations}
+              onClearOnly={onClearAssociations}
+              ingredients={recipe.recipeIngredient || []}
+              instructions={recipe.recipeInstructions || []}
+              associations={currentAssociations}
+              onSaveAssociations={onSaveAssociations}
+            />
           </DialogContent>
         </Dialog>
       </div>

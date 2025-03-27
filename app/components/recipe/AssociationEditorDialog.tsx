@@ -39,7 +39,7 @@ export default function AssociationEditorDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
+        <Button variant="outline" className="w-full">
           <Settings2 className="mr-2 h-4 w-4" />
           Edit Associations
         </Button>

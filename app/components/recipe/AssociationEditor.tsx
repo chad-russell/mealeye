@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, type ReactNode } from "react";
 import { components } from "@/lib/types/openapi-generated";
 import { type IngredientAssociation } from "@/lib/utils/ingredient-matching";
 import { Button } from "@/components/ui/button";
@@ -114,17 +114,35 @@ export default function AssociationEditor({
     }
 
     const matchText = hoveredAssociation.text;
-    const parts = text.split(new RegExp(`(${matchText})`, "i"));
 
-    return parts.map((part, i) =>
-      part.toLowerCase() === matchText.toLowerCase() ? (
-        <span key={i} className="bg-yellow-100 dark:bg-yellow-900 rounded px-1">
-          {part}
-        </span>
-      ) : (
-        part
-      )
+    // Find the first occurrence of the text
+    const startIndex = text.toLowerCase().indexOf(matchText.toLowerCase());
+    if (startIndex === -1) return text;
+
+    const endIndex = startIndex + matchText.length;
+    const parts: ReactNode[] = [];
+
+    // Add text before the highlight
+    if (startIndex > 0) {
+      parts.push(<span key="pre">{text.slice(0, startIndex)}</span>);
+    }
+
+    // Add the highlighted text (preserve original casing)
+    parts.push(
+      <span
+        key="highlight"
+        className="bg-yellow-100 dark:bg-yellow-900 rounded px-1"
+      >
+        {text.slice(startIndex, endIndex)}
+      </span>
     );
+
+    // Add text after the highlight
+    if (endIndex < text.length) {
+      parts.push(<span key="post">{text.slice(endIndex)}</span>);
+    }
+
+    return <>{parts}</>;
   };
 
   return (
